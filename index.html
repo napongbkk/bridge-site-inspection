@@ -235,6 +235,14 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 /* Picture report (PC) */
 .desk-only{display:none} @media (min-width:900px){.desk-only{display:flex}}
+.pr-cta{align-items:center;gap:16px;width:100%;padding:16px 18px;border:0;border-radius:var(--r);background:var(--card);box-shadow:var(--shadow-sm);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.pr-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(22,24,29,.10)}
+.pr-cta:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+.pr-cta-ic{flex:0 0 auto;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--hi);color:var(--hi-ink)}
+.pr-cta-ic svg{width:26px;height:26px}
+.pr-cta-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pr-cta-tx b{font-size:16px} .pr-cta-tx span{font-size:13.5px;color:var(--muted)}
+.pr-cta-go{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;padding:10px 14px 10px 18px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px}
 body.wide main{max-width:none;padding:0;gap:0} body.wide .bar-in{max-width:none}
 .pr{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:calc(100vh - 62px)}
 .pr-side{position:sticky;top:62px;height:calc(100vh - 62px);overflow:auto;padding:16px;background:var(--card);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:12px}
@@ -826,14 +834,19 @@ function viewHome() {
   <div class="hello"><h2 class="hero grow">Bridge site inspection</h2></div>
   <div class="card syncbox" id="syncbox" role="status">${syncBoxHtml()}</div>
   ${install}
-  <div class="card desk-only row between wrap"><span><b>Picture report for Word</b><br><span class="sub">Drag pictures onto A4 pages, two per page, with numbered captions.</span></span><button class="btn sm" data-act="open-layout">Open picture report</button></div>
   <label class="search"><span class="sr">Search bridges</span><input id="q" type="search" placeholder="Search bridge No., project, road or SLK" value="${esc(S.q)}" data-in="q" autocomplete="off">${ICON.search}</label>
 
   <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">${Store.all('bridges').length} on this device</span></div>
     <div class="chips" role="group" aria-label="Filter by type">
       <button class="cat" aria-pressed="${S.ft === 'all'}" data-act="ft" data-v="all" style="padding-left:18px">All</button>
       ${Object.keys(TEMPLATES).map(k => `<button class="cat" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}"><span class="ci t-${k}">${typeIcon(k, 24, 15)}</span>${esc(TEMPLATES[k].name.replace(' bridge', ''))}</button>`).join('')}</div>
-    <div id="blist" class="sec">${bridgeList()}</div></div>`;
+    <div id="blist" class="sec">${bridgeList()}</div></div>
+
+  <button class="pr-cta desk-only" data-act="open-layout">
+    <span class="pr-cta-ic" aria-hidden="true">${ICON.doc}</span>
+    <span class="pr-cta-tx"><b>Picture report for Word</b><span>Arrange photos on A4 pages · two per page · numbered captions</span></span>
+    <span class="pr-cta-go">Open ${ICON.chev}</span>
+  </button>`;
 }
 function syncBoxHtml() {
   const on = navigator.onLine, n = Store.dirty || 0, url = Sync.url;
