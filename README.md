@@ -129,3 +129,13 @@ Photos), then attach them in this app with **Choose several**.
 Upload the changed files to the same place and change `VERSION` at the top of `sw.js`
 (for example `bsi-v5` → `bsi-v6`). Phones pick up the new version the next time the app is
 opened with signal, and use it from the following launch. Inspections already on the phone are kept.
+
+## Picture report (PC / laptop)
+
+Open the app link in Chrome or Edge on a computer (it syncs from Google Drive), then click **Open picture report** on the home page, or **Picture report** on an inspection's Review page / Photos folder.
+
+- Left: the inspection's elements, grouped by location. Click an element to show its pictures.
+- Drag a picture (or a whole element) onto the A4 pages. Two pictures fit per page; drop on the top or bottom half of a picture to place it before or after. Drag pictures on the pages to reorder.
+- Captions number automatically: "Picture 1: Abutment 1 Pile No.1 - …". Click a caption to change the description (↺ puts the automatic one back).
+- Hover a picture to change its size, make it full page, move or remove it.
+- **Export Word** downloads `<package>_Pictures.docx` laid out exactly as shown. The layout is remembered on that computer.

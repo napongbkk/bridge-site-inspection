@@ -233,6 +233,50 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .sheet::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:var(--line);margin:0 auto 12px}
 .sheet-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* Picture report (PC) */
+.desk-only{display:none} @media (min-width:900px){.desk-only{display:flex}}
+body.wide main{max-width:none;padding:0;gap:0} body.wide .bar-in{max-width:none}
+.pr{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:calc(100vh - 62px)}
+.pr-side{position:sticky;top:62px;height:calc(100vh - 62px);overflow:auto;padding:16px;background:var(--card);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:12px}
+.pr-side>*,.pr-side>label.f{flex:0 0 auto}
+.pr-loc h4{margin:6px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pr-el{border-radius:14px;background:var(--well);margin-bottom:6px;overflow:hidden}
+.pr-eh{display:flex;align-items:center;cursor:grab}
+.pr-et{flex:1;display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;padding:10px 4px 10px 10px;cursor:pointer;min-height:44px}
+.pr-et svg{transition:transform .15s;flex:0 0 auto} .pr-el.open .pr-et svg{transform:rotate(90deg)}
+.pr-cnt{font-size:12px;color:var(--muted);font-weight:600} .pr-cnt.all{color:var(--ok-ink)}
+.pr-plus{border:0;background:var(--card);color:var(--ink);width:32px;height:32px;border-radius:10px;margin-right:6px;font-size:18px;cursor:pointer} .pr-plus:disabled{opacity:.35;cursor:default}
+.pr-thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 8px 10px}
+.pr-th{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--card);cursor:grab}
+.pr-th img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.pr-th .pname{font-size:9.5px}
+.pr-th.used img{opacity:.45}
+.pr-add,.pr-num{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:999px;border:0;display:grid;place-items:center;font-size:15px;font-weight:800;line-height:1}
+.pr-add{background:var(--ink);color:var(--bg);cursor:pointer} .pr-num{background:var(--ok);color:var(--ok-ink);font-size:12px}
+.pr-work{padding:0 24px 60px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pr-tools{position:sticky;top:62px;z-index:3;background:var(--bg);display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 0}
+.pr-tools .in{min-height:40px}
+.pr-pages{display:flex;flex-direction:column;align-items:center;gap:24px;overflow-x:auto;padding-bottom:20px}
+.pg{position:relative;flex:0 0 auto;box-sizing:border-box;width:calc(210 * var(--mm));height:calc(297 * var(--mm));padding:calc(20 * var(--mm));background:#fff;color:#111;box-shadow:0 2px 16px rgba(0,0,0,.14);display:flex;flex-direction:column;overflow:hidden}
+.pg.ghost{opacity:.75}
+.pg-head{position:absolute;top:calc(10 * var(--mm));left:calc(20 * var(--mm));right:calc(20 * var(--mm));text-align:center;font:calc(3.2 * var(--mm))/1.2 Calibri,Arial,sans-serif;color:#555}
+.pg-no{position:absolute;bottom:calc(8 * var(--mm));right:calc(20 * var(--mm));font:calc(3.2 * var(--mm)) Calibri,Arial,sans-serif;color:#555}
+.pr-fig{margin:0 0 calc(4 * var(--mm));position:relative;display:flex;flex-direction:column;align-items:center;border-radius:6px;outline:2px dashed transparent;outline-offset:2px;cursor:grab}
+.pr-fig:hover,.pr-fig:focus-within{outline-color:#c3c9d2}
+.pr-fig.dragging{opacity:.4}
+.pr-fig img{display:block;width:auto;height:auto;background:#eee;min-width:calc(20 * var(--mm));min-height:calc(15 * var(--mm))}
+.pr-fig figcaption{font:700 calc(3.53 * var(--mm))/1.25 Calibri,Arial,sans-serif;text-align:center;margin-top:calc(1 * var(--mm));max-width:100%;color:#111;cursor:text}
+.pr-cap{outline:none;border-bottom:1px dashed transparent;padding:0 2px} .pr-cap:hover{border-bottom-color:#9aa3ad} .pr-cap:focus{background:#fff7d6;border-bottom-color:#16181d}
+.pr-reset{border:0;background:#eef0f3;border-radius:6px;cursor:pointer;font-size:12px;padding:1px 6px;color:#333}
+.pr-ft{position:absolute;top:6px;right:6px;display:none;gap:6px;align-items:center;background:var(--card);color:var(--ink);border-radius:12px;padding:6px 8px;box-shadow:0 4px 16px rgba(0,0,0,.18);font:600 12px system-ui,sans-serif;z-index:2;cursor:default}
+.pr-fig:hover .pr-ft,.pr-fig:focus-within .pr-ft{display:flex}
+.pr-ft label{display:flex;align-items:center;gap:6px} .pr-ft input[type=range]{width:110px;accent-color:var(--ink)}
+.pr-ft button{border:0;background:var(--well);color:var(--ink);border-radius:8px;min-width:28px;height:28px;padding:0 8px;font:inherit;cursor:pointer} .pr-ft button:disabled{opacity:.35}
+.pr-dim{color:var(--muted);min-width:84px}
+.pr-drop{flex:1;min-height:calc(30 * var(--mm));border:2px dashed #c3c9d2;border-radius:12px;display:grid;place-items:center;color:#6b7380;font:600 14px system-ui,sans-serif;text-align:center;padding:12px}
+.pr-drop.over{border-color:var(--link);background:rgba(47,111,222,.07);color:var(--link)}
+.pr-fig.over-top{box-shadow:0 -5px 0 var(--link)} .pr-fig.over-bot{box-shadow:0 5px 0 var(--link)}
+@media (max-width:899px){.pr{grid-template-columns:1fr}.pr-side{position:static;height:auto;max-height:55vh}.pr-work{padding:0 12px 40px}.pr-tools{top:62px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -737,6 +781,7 @@ function render() {
   try {
     const tabbed = ['home', 'inspections', 'photos', 'photofolder', 'data'].includes(r.name);
     document.body.classList.toggle('home', r.name === 'home');
+    document.body.classList.toggle('wide', r.name === 'layout');
     document.body.classList.toggle('has-tabs', tabbed);
     $('#tabs').hidden = !tabbed;
     document.querySelectorAll('#tabs [data-act="tab"]').forEach(t => { if (t.dataset.v === (r.name === 'photofolder' ? 'photos' : r.name)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
@@ -750,6 +795,7 @@ function render() {
     else if (r.name === 'checklist') v.innerHTML = viewChecklist(r.id);
     else if (r.name === 'component') v.innerHTML = viewComponent(r.id, r.cid);
     else if (r.name === 'review') v.innerHTML = viewReview(r.id);
+    else if (r.name === 'layout') { v.innerHTML = viewLayout(r.id); prAfter(); }
   } catch (e) { console.error(e); v.innerHTML = `<div class="card warn"><b>Something went wrong showing this screen.</b><span class="sub">${esc(e.message)}</span><button class="btn out" data-act="home">Back to start</button></div>`; }
   if (S.lastCid && (r.name === 'checklist' || r.name === 'review')) {
     const row = v.querySelector(`[data-act="open-comp"][data-cid="${CSS.escape(S.lastCid)}"]`);
@@ -780,6 +826,7 @@ function viewHome() {
   <div class="hello"><h2 class="hero grow">Bridge site inspection</h2></div>
   <div class="card syncbox" id="syncbox" role="status">${syncBoxHtml()}</div>
   ${install}
+  <div class="card desk-only row between wrap"><span><b>Picture report for Word</b><br><span class="sub">Drag pictures onto A4 pages, two per page, with numbered captions.</span></span><button class="btn sm" data-act="open-layout">Open picture report</button></div>
   <label class="search"><span class="sr">Search bridges</span><input id="q" type="search" placeholder="Search bridge No., project, road or SLK" value="${esc(S.q)}" data-in="q" autocomplete="off">${ICON.search}</label>
 
   <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">${Store.all('bridges').length} on this device</span></div>
@@ -887,7 +934,7 @@ function viewPhotoFolder(bridgeId) {
   const byInsp = {};
   list.forEach((x, k) => (byInsp[x.insp.id] = byInsp[x.insp.id] || { insp: x.insp, items: [] }).items.push({ ...x, k }));
   return `<div class="row" style="gap:12px">${tIcon(typeOf(b))}<div class="grow"><b style="font-size:18px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${esc(bridgeTitle(b))}</span></div>${syncPill(list)}</div>
-  ${Object.values(byInsp).map(({ insp, items }) => `<div class="sec"><div class="sec-h"><h3>${esc(LEVELS[insp.level])}</h3><span class="sub">${fmtDate(insp.startedAt)} · ${items.length}</span></div>
+  ${Object.values(byInsp).map(({ insp, items }) => `<div class="sec"><div class="sec-h"><h3>${esc(LEVELS[insp.level])}</h3><span class="sub">${fmtDate(insp.startedAt)} · ${items.length}</span><button class="more" data-act="open-layout" data-id="${esc(insp.id)}">Picture report</button></div>
     <div class="photos">${items.map(x => { const st = photoSync(x.id);
       return `<button class="ph" data-act="lb-open" data-k="${x.k}" aria-label="${esc(x.name)}, ${esc(st.label)}"><img alt="" src="${esc(Store.photoSrc(x.id))}" data-pid="${esc(x.id)}">
         <span class="psync ${st.cls}" aria-hidden="true">${st.cls === 'wait' ? ICON.clock : st.cls === 'ok' ? ICON.check : ICON.phone}</span><span class="pname">${esc(x.name)}.jpg</span></button>`; }).join('')}</div></div>`).join('')}`;
@@ -1139,7 +1186,8 @@ function viewReview(id) {
   <div class="sec"><div class="sec-h"><h3>Export</h3></div>
     <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
     <span class="sub">One folder named <span class="mono">${esc(pkgName(insp, b))}</span> with the Word report (summary table, then each picture captioned “Picture 1: Abutment 1 Pile No.1 - …”), every picture as its own file in <span class="mono">Photos/</span> (${t.photos ? esc(Object.values(names).slice(0, 2).join('.jpg, ')) + '.jpg …' : esc(b.components.filter(c => c.loc !== 'GEN').slice(0, 2).map(c => c.ph + '.jpg').join(', ') + ' …')}) and a picture index. Works offline.</span>
-    <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} ${isAndroid() ? 'Save all pictures to gallery' : 'Save all pictures to Photos'}</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div></div>
+    <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} ${isAndroid() ? 'Save all pictures to gallery' : 'Save all pictures to Photos'}</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div>
+    <button class="btn out block" data-act="open-layout" data-id="${esc(id)}">${ICON.doc} Picture report – arrange pictures for Word (PC / laptop)</button></div>
   ${S.confirm === 'del-insp' ? `<div class="confirm"><span class="grow">Delete this inspection and its photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-insp" data-id="${esc(id)}">Delete</button></div>`
     : `<button class="btn ghost" data-act="ask" data-what="del-insp">Delete inspection</button>`}`;
 }
@@ -1297,6 +1345,209 @@ const IN = {
   review() { clearTimeout(reviewT); reviewT = setTimeout(flushReview, 600); },
 };
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el || el.disabled) return; const fn = A[el.dataset.act]; if (fn) { e.preventDefault(); fn(el.dataset, el); } });
+/* ---------- Picture report (PC / laptop) ----------
+   Left: the inspection's elements; click one to show its pictures. Drag pictures (or a whole
+   element) onto the A4 pages. Two pictures fit per page; numbering and captions run automatically,
+   and each picture's size and description can be changed. Export builds the Word file. */
+const PR = { mm: 3, open: new Set(), drag: null, sideTop: 0, saveT: null };
+const PR_BOX = { half: { w: 160, h: 108 }, full: { w: 160, h: 228 } };   // mm inside 20 mm A4 margins
+const prKey = id => 'bsi-layout-' + id;
+function prLoad(id) { const L = lsGet(prKey(id), null); return L && Array.isArray(L.items) ? L : { title: '', items: [] }; }
+function prSave() { clearTimeout(PR.saveT); PR.saveT = setTimeout(() => { if (S.layId && S.lay) lsSet(prKey(S.layId), S.lay); }, 250); }
+function prInspections() {
+  return Store.all('inspections').filter(i => Store.get('bridges', i.bridgeId) && photosOf(i).length)
+    .sort((a, b) => (b.updatedAt || b.startedAt || '').localeCompare(a.updatedAt || a.startedAt || ''));
+}
+function prPics(insp, b) {
+  const names = photoNames(insp, b), compBy = Object.fromEntries(b.components.map(c => [c.id, c])), I = itemsOf(insp), out = {};
+  orderedPhotos(insp, b).forEach(p => { const c = compBy[p.componentId]; out[p.id] = { pid: p.id, cid: p.componentId, c, name: names[p.id], auto: captionOf(c, c ? I[c.id] : null) }; });
+  return out;
+}
+// Pages: a normal picture takes half a page, a "full page" picture a whole one.
+function prPages(items) {
+  const pages = []; let cur = null;
+  items.forEach((x, i) => { const u = x.full ? 2 : 1; if (!cur || cur.used + u > 2) { cur = { used: 0, list: [] }; pages.push(cur); } cur.list.push({ x, i }); cur.used += u; });
+  return pages;
+}
+const prCap = (x, pics) => x.cap != null ? x.cap : pics[x.pid].auto;
+const prImgStyle = x => { const box = x.full ? PR_BOX.full : PR_BOX.half, s = (x.size || 100) / 100; return `max-width:calc(${(box.w * s).toFixed(1)} * var(--mm));max-height:calc(${(box.h * s).toFixed(1)} * var(--mm))`; };
+
+function viewLayout(id) {
+  PR.sideTop = $('.pr-side')?.scrollTop || 0;
+  setBar('Picture report', 'Back');
+  const all = prInspections();
+  let insp = id && Store.get('inspections', id);
+  if (!insp || !photosOf(insp).length) {
+    if (!all.length) return '<div class="card"><b>No photos yet</b><span class="sub">Take photos during an inspection (or let this computer sync from Google Drive), then come back here.</span></div>';
+    insp = all[0]; S.route.id = insp.id;
+  }
+  const iid = S.route.id, b = Store.get('bridges', insp.bridgeId);
+  if (S.layId !== iid) { S.lay = prLoad(iid); S.layId = iid; }
+  const pics = prPics(insp, b), L = S.lay;
+  L.items = L.items.filter(x => pics[x.pid]);
+  const used = new Set(L.items.map(x => x.pid)), num = Object.fromEntries(L.items.map((x, i) => [x.pid, i + 1]));
+  // Left menu: location → element → pictures
+  const byLoc = [];
+  b.components.forEach(c => {
+    const ps = Object.values(pics).filter(p => p.cid === c.id); if (!ps.length) return;
+    let g = byLoc.find(g => g.loc === c.loc); if (!g) byLoc.push(g = { loc: c.loc, comps: [] });
+    g.comps.push({ c, ps });
+  });
+  const orphans = Object.values(pics).filter(p => !p.c);
+  if (orphans.length) byLoc.push({ loc: '', comps: [{ c: { id: '', name: 'Other photos' }, ps: orphans }] });
+  const total = Object.keys(pics).length;
+  const side = `<aside class="pr-side" aria-label="Pictures">
+    <label class="f"><span>Inspection</span><select class="in" data-pr="insp">${all.map(i => { const bb = Store.get('bridges', i.bridgeId);
+      return `<option value="${esc(i.id)}" ${i.id === iid ? 'selected' : ''}>${esc(typeShort(bb))} ${esc(bb.bridgeNo)}${bb.project ? ' · ' + esc(bb.project) : ''} · ${esc(fmtDate(i.startedAt))}</option>`; }).join('')}</select></label>
+    <div class="row between"><span class="sub">${used.size} of ${total} pictures in report</span><button class="btn sm" data-act="pr-addall" ${used.size === total ? 'disabled' : ''}>Add all</button></div>
+    <span class="sub">Click an element to show its pictures, then drag them onto the pages (or click +).</span>
+    ${byLoc.map(g => `<div class="pr-loc"><h4>${esc(g.loc ? locFull(g.loc) || 'General' : 'Other')}</h4>
+      ${g.comps.map(({ c, ps }) => { const k = c.id || '_', open = PR.open.has(k), n = ps.filter(p => used.has(p.pid)).length;
+        return `<div class="pr-el ${open ? 'open' : ''}">
+        <div class="pr-eh" draggable="true" data-dcomp="${esc(c.id)}"><button class="pr-et" data-act="pr-toggle" data-k="${esc(k)}" aria-expanded="${open}">${ICON.chev}<span class="grow">${esc(c.id ? compFull(c) : c.name)}</span><span class="pr-cnt ${n === ps.length ? 'all' : ''}">${n}/${ps.length}</span></button>
+          <button class="pr-plus" data-act="pr-addcomp" data-cid="${esc(c.id)}" aria-label="Add all pictures of ${esc(c.id ? compFull(c) : c.name)}" title="Add all pictures of this element" ${n === ps.length ? 'disabled' : ''}>+</button></div>
+        ${open ? `<div class="pr-thumbs">${ps.map(p => `<div class="pr-th ${used.has(p.pid) ? 'used' : ''}" draggable="true" data-dpid="${esc(p.pid)}" title="${esc(p.name)}.jpg">
+          <img alt="${esc(p.name)}" src="${esc(Store.photoSrc(p.pid))}" data-pid="${esc(p.pid)}" draggable="false"><span class="pname">${esc(p.name)}</span>
+          ${used.has(p.pid) ? `<span class="pr-num" aria-label="Picture ${num[p.pid]}">${num[p.pid]}</span>` : `<button class="pr-add" data-act="pr-add" data-pid="${esc(p.pid)}" aria-label="Add ${esc(p.name)} to the report">+</button>`}</div>`).join('')}</div>` : ''}</div>`; }).join('')}</div>`).join('')}
+  </aside>`;
+  const pages = prPages(L.items), last = pages[pages.length - 1];
+  const head = `<div class="pg-head" data-head>${esc(L.title || '')}</div>`;
+  const fig = ({ x, i }) => `<figure class="pr-fig" draggable="true" data-idx="${i}" data-drop="${i}">
+      <div class="pr-ft" role="group" aria-label="Picture ${i + 1} options">
+        <label title="Picture size">Size <input type="range" min="30" max="100" step="5" value="${x.size || 100}" data-pr="size" data-idx="${i}" aria-label="Size of picture ${i + 1}"></label>
+        <span class="pr-dim" data-dim="${i}"></span>
+        <button data-act="pr-full" data-idx="${i}" title="${x.full ? 'Back to two per page' : 'Use the whole page'}">${x.full ? '½ page' : 'Full page'}</button>
+        <button data-act="pr-move" data-idx="${i}" data-v="-1" aria-label="Move picture ${i + 1} earlier" ${i ? '' : 'disabled'}>↑</button>
+        <button data-act="pr-move" data-idx="${i}" data-v="1" aria-label="Move picture ${i + 1} later" ${i < L.items.length - 1 ? '' : 'disabled'}>↓</button>
+        <button data-act="pr-del" data-idx="${i}" aria-label="Remove picture ${i + 1}" title="Remove">✕</button></div>
+      <img alt="" src="${esc(Store.photoSrc(x.pid))}" data-pid="${esc(x.pid)}" data-fi="${i}" draggable="false" style="${prImgStyle(x)}">
+      <figcaption>Picture ${i + 1}: <span class="pr-cap" contenteditable="true" spellcheck="true" data-idx="${i}" aria-label="Description of picture ${i + 1}">${esc(prCap(x, pics))}</span>${x.cap != null ? ` <button class="pr-reset" data-act="pr-reset" data-idx="${i}" title="Use the automatic description" aria-label="Use the automatic description">↺</button>` : ''}</figcaption>
+    </figure>`;
+  const drop = txt => `<div class="pr-drop" data-drop="end">${txt}</div>`;
+  const pagesHtml = pages.map((pg, pi) => `<div class="pg" aria-label="Page ${pi + 1}">${head}${pg.list.map(fig).join('')}${pg === last && last.used < 2 ? drop('Drop a picture here') : ''}<span class="pg-no">${pi + 1}</span></div>`).join('')
+    + (!pages.length || last.used >= 2 ? `<div class="pg ghost">${head}${drop(pages.length ? 'Drop here to start a new page' : 'Drag pictures from the left and drop them here')}</div>` : '');
+  return `<div class="pr">${side}
+  <section class="pr-work" aria-label="Report pages">
+    <div class="pr-tools">
+      <div><b style="font-size:17px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b> <span class="sub">· ${L.items.length} picture${L.items.length === 1 ? '' : 's'} · ${pages.length} page${pages.length === 1 ? '' : 's'}</span></div>
+      <label class="f grow" style="min-width:220px"><span class="sr">Page heading</span><input class="in" data-pr="title" value="${esc(L.title || '')}" placeholder="Page heading (optional), e.g. Appendix A – Photographs"></label>
+      <div class="row" style="gap:6px"><button class="icb soft" data-act="pr-zoom" data-v="-0.5" aria-label="Zoom out">−</button><button class="icb soft" data-act="pr-zoom" data-v="0.5" aria-label="Zoom in">+</button></div>
+      <button class="btn ghost sm" data-act="pr-clear" ${L.items.length ? '' : 'disabled'}>Clear</button>
+      <button class="btn sm" data-act="pr-export" ${L.items.length ? '' : 'disabled'}>${ICON.doc} Export Word</button>
+    </div>
+    <div class="pr-pages" style="--mm:${PR.mm}px">${pagesHtml}</div>
+  </section></div>`;
+}
+function prDims(img) {
+  const i = +img.dataset.fi, x = S.lay?.items[i]; if (!x || !img.naturalWidth) return;
+  const box = x.full ? PR_BOX.full : PR_BOX.half, k = Math.min(box.w / img.naturalWidth, box.h / img.naturalHeight) * (x.size || 100) / 100;
+  const el = document.querySelector(`[data-dim="${i}"]`); if (el) el.textContent = `${(img.naturalWidth * k / 10).toFixed(1)} × ${(img.naturalHeight * k / 10).toFixed(1)} cm`;
+}
+function prAfter() {
+  const sd = $('.pr-side'); if (sd) sd.scrollTop = PR.sideTop;
+  document.querySelectorAll('.pr-fig img').forEach(img => { if (img.complete) prDims(img); img.addEventListener('load', () => prDims(img)); });
+}
+function prAdd(pids, at) {
+  const L = S.lay, have = new Set(L.items.map(x => x.pid)), add = pids.filter(p => !have.has(p)).map(pid => ({ pid, size: 100 }));
+  if (!add.length) { toast(pids.length > 1 ? 'Those pictures are already in the report.' : 'That picture is already in the report.'); return; }
+  L.items.splice(at == null ? L.items.length : at, 0, ...add); prSave(); render();
+}
+function prCompPids(cid) { const insp = Store.get('inspections', S.layId), b = Store.get('bridges', insp.bridgeId); return Object.values(prPics(insp, b)).filter(p => cid ? p.cid === cid : !p.c).map(p => p.pid); }
+Object.assign(A, {
+  'open-layout'(d) { nav({ name: 'layout', id: d.id || '' }); },
+  'pr-toggle'(d) { PR.open.has(d.k) ? PR.open.delete(d.k) : PR.open.add(d.k); render(); },
+  'pr-add'(d) { prAdd([d.pid]); },
+  'pr-addcomp'(d) { prAdd(prCompPids(d.cid)); },
+  'pr-addall'() { const insp = Store.get('inspections', S.layId), b = Store.get('bridges', insp.bridgeId); prAdd(Object.keys(prPics(insp, b))); },
+  'pr-del'(d) { S.lay.items.splice(+d.idx, 1); prSave(); render(); },
+  'pr-full'(d) { const x = S.lay.items[+d.idx]; x.full = !x.full; prSave(); render(); },
+  'pr-move'(d) { const L = S.lay.items, i = +d.idx, j = i + +d.v; if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; prSave(); render(); },
+  'pr-reset'(d) { delete S.lay.items[+d.idx].cap; prSave(); render(); },
+  'pr-clear'() { if (!confirm('Remove all pictures from this report layout? (The photos themselves are not deleted.)')) return; S.lay.items = []; prSave(); render(); },
+  'pr-zoom'(d) { PR.mm = Math.min(6, Math.max(1.5, PR.mm + +d.v)); const p = $('.pr-pages'); if (p) p.style.setProperty('--mm', PR.mm + 'px'); },
+  'pr-export'() { prExport(); },
+});
+// Typing and sliders update in place (no re-render, so the cursor stays put).
+document.addEventListener('input', e => {
+  const t = e.target; if (S.route.name !== 'layout' || !S.lay) return;
+  if (t.matches('.pr-cap')) {
+    S.lay.items[+t.dataset.idx].cap = t.textContent.replace(/\s+/g, ' ').trim(); prSave();
+    if (!t.parentNode.querySelector('.pr-reset')) t.insertAdjacentHTML('afterend', ` <button class="pr-reset" data-act="pr-reset" data-idx="${t.dataset.idx}" title="Use the automatic description" aria-label="Use the automatic description">↺</button>`);
+  }
+  else if (t.dataset.pr === 'size') { const x = S.lay.items[+t.dataset.idx]; x.size = +t.value; const img = document.querySelector(`.pr-fig img[data-fi="${t.dataset.idx}"]`); if (img) { img.style.cssText = prImgStyle(x); prDims(img); } prSave(); }
+  else if (t.dataset.pr === 'title') { S.lay.title = t.value; document.querySelectorAll('[data-head]').forEach(h => h.textContent = t.value); prSave(); }
+});
+document.addEventListener('change', e => { if (e.target.dataset.pr === 'insp') { PR.open.clear(); nav({ name: 'layout', id: e.target.value }, true); } });
+document.addEventListener('keydown', e => { if (e.target.matches?.('.pr-cap') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+// Drag and drop
+function prClearOver() { document.querySelectorAll('.over,.over-top,.over-bot').forEach(el => el.classList.remove('over', 'over-top', 'over-bot')); }
+function prDropAt(e) {
+  const el = e.target.closest?.('[data-drop]'); if (!el) return e.target.closest?.('.pr-pages') ? { el: null, at: null } : null;
+  if (el.dataset.drop === 'end') return { el, at: null, cls: 'over' };
+  const r = el.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+  return { el, at: +el.dataset.drop + (after ? 1 : 0), cls: after ? 'over-bot' : 'over-top' };
+}
+document.addEventListener('dragstart', e => {
+  if (S.route.name !== 'layout') return;
+  const th = e.target.closest?.('[data-dpid]'), eh = e.target.closest?.('[data-dcomp]'), fg = e.target.closest?.('.pr-fig');
+  if (th) PR.drag = { pids: [th.dataset.dpid] };
+  else if (eh) PR.drag = { pids: prCompPids(eh.dataset.dcomp) };
+  else if (fg && !e.target.closest('.pr-ft,.pr-cap')) PR.drag = { move: +fg.dataset.idx };
+  else { PR.drag = null; return; }
+  e.dataTransfer.effectAllowed = 'copyMove'; e.dataTransfer.setData('text/plain', 'bsi-picture');
+  (fg || th)?.classList.add('dragging');
+});
+document.addEventListener('dragover', e => {
+  if (!PR.drag) return; const d = prDropAt(e); prClearOver(); if (!d) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = PR.drag.move != null ? 'move' : 'copy'; if (d.el) d.el.classList.add(d.cls);
+});
+document.addEventListener('drop', e => {
+  if (!PR.drag) return; const d = prDropAt(e), drag = PR.drag; PR.drag = null; prClearOver(); if (!d) return;
+  e.preventDefault();
+  if (drag.move != null) {
+    const L = S.lay.items, from = drag.move; let to = d.at == null ? L.length : d.at;
+    if (to > from) to--; if (to === from) return render();
+    const [x] = L.splice(from, 1); L.splice(to, 0, x); prSave(); render();
+  } else prAdd(drag.pids, d.at);
+});
+document.addEventListener('dragend', () => { PR.drag = null; prClearOver(); document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging')); });
+
+async function prExport() {
+  const insp = Store.get('inspections', S.layId), b = insp && Store.get('bridges', insp.bridgeId), L = S.lay; if (!b || !L.items.length) return;
+  toast('Building Word document…');
+  try {
+    const pics = prPics(insp, b), pages = prPages(L.items), rels = [], media = []; let body = '', n = 0, missing = 0;
+    for (const [pi, pg] of pages.entries()) {
+      for (const [k, { x }] of pg.list.entries()) {
+        const blob = await Store.photoBlob(x.pid); if (!blob) { missing++; continue; }
+        const sz = await imgSize(blob), box = x.full ? PR_BOX.full : PR_BOX.half, s = Math.min(box.w / sz.w, box.h / sz.h) * (x.size || 100) / 100;
+        const cx = Math.round(sz.w * s * 36000), cy = Math.round(sz.h * s * 36000), nid = ++n, rid = 'rIdImg' + nid, file = pics[x.pid].name + '.jpg';
+        rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/picture${nid}.jpeg"/>`);
+        media.push(blob);
+        body += `<w:p><w:pPr>${pi > 0 && k === 0 ? '<w:pageBreakBefore/>' : ''}<w:keepNext/><w:jc w:val="center"/><w:spacing w:before="0" w:after="60"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${nid}" name="Picture ${nid}" descr="${xe(file)}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${nid}" name="${xe(file)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+        body += `<w:p><w:pPr><w:pStyle w:val="Caption"/><w:spacing w:before="0" w:after="240"/></w:pPr>${wRun('Picture ')}<w:fldSimple w:instr=" SEQ Picture \\* ARABIC "><w:r><w:rPr><w:b/></w:rPr><w:t>${nid}</w:t></w:r></w:fldSimple>${wRun(': ' + prCap(x, pics))}</w:p>`;
+      }
+    }
+    const title = (L.title || '').trim();
+    const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document ${NS} xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}
+<w:sectPr>${title ? '<w:headerReference w:type="default" r:id="rIdHdr"/>' : ''}<w:footerReference w:type="default" r:id="rIdFtr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="454" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    const z = new JSZip();
+    z.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
+    z.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    z.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdHdr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdFtr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${rels.join('')}</Relationships>`);
+    z.file('word/styles.xml', DOCX_STYLES);
+    z.file('word/header1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>${wP(wRun(title || ' ', '<w:color w:val="555555"/><w:sz w:val="18"/>'), '<w:jc w:val="center"/><w:spacing w:after="0"/>')}</w:hdr>`);
+    z.file('word/footer1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}><w:p><w:pPr><w:jc w:val="right"/><w:spacing w:after="0"/></w:pPr><w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple></w:p></w:ftr>`);
+    z.file('word/document.xml', doc);
+    for (let i = 0; i < media.length; i++) z.file(`word/media/picture${i + 1}.jpeg`, await fitPhoto(media[i], WORD_MAX_BYTES));
+    const blob = await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' });
+    const fname = `${pkgName(insp, b)}_Pictures.docx`;
+    if (isIOS() || isAndroid()) offerFile(fname, blob); else { downloadBlob(blob, fname); toast(`Saved ${fname} to Downloads.`); }
+    if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
+  } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
+}
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
 document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
 window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
