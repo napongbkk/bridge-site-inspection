@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "Bridge Site Inspection",
   "short_name": "Bridge Inspect",
   "description": "Offline site inspection for timber, concrete and steel bridges and underpasses: defects, comments, photos, Word report.",
@@ -6,6 +7,7 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
+  "categories": ["productivity", "utilities"],
   "background_color": "#EDEFEC",
   "theme_color": "#17201B",
   "icons": [

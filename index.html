@@ -290,6 +290,7 @@ const svgI = d => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" s
 const ICON = { mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
 const typeIcon = (t, w = 64, h = 40) => `<svg width="${w}" height="${h}" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t]}</svg>`;
 const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+const isAndroid = () => /Android/i.test(navigator.userAgent);
 const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 /* =========================================================================
@@ -519,21 +520,40 @@ function onRemoteChange() {
 /* =========================================================================
    State, routing, helpers
    ========================================================================= */
-const S = { newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
-function nav(route, replace) { if (!replace) S.stack.push(S.route); S.route = route; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0); }
-/* Leaving a component (Done or Back): hand its new camera photos to iPhone in one go.
-   The tap that leaves the screen is what lets the share sheet open; iPhone then asks
-   once ("Save Images"), because web apps are never allowed to save to Photos silently. */
+const S = { hIdx: 0, newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
+function nav(route, replace) {
+  if (!replace) { S.stack.push(S.route); S.hIdx++; try { history.pushState({ idx: S.hIdx }, ''); } catch {} }
+  S.route = route; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0);
+}
+/* Leaving a component (Done or Back): hand its new camera photos to the phone in one go.
+   iPhone: the tap that leaves the screen opens the share sheet; iPhone asks once ("Save Images"),
+   because web apps are never allowed to save to Photos silently.
+   Android: the photos are saved straight to Downloads, which Gallery and Google Photos show. */
 function savePendingToPhotos() {
   const list = S.newPhotos; S.newPhotos = [];
   if (!list.length || !lsGet('bsi-camroll', true)) return;
   const insp = Store.get('inspections', list[0].inspId), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
   const names = photoNames(insp, b), keep = list.filter(x => insp.photos?.[x.id] && !insp.photos[x.id].deleted);
   const files = keep.map(x => new File([x.blob], (names[x.id] || x.id) + '.jpg', { type: 'image/jpeg' }));
-  if (!files.length || !canShareFiles(files)) return;
+  if (!files.length) return;
+  if (isAndroid()) { saveImagesToDevice(files); return; }
+  if (!canShareFiles(files)) return;
   navigator.share({ files }).then(() => toast(`${files.length} photo${files.length > 1 ? 's' : ''} sent to iPhone.`)).catch(() => {});
 }
-function back() { if (S.route.name === 'component') { flushDraft(); savePendingToPhotos(); } S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
+function leaveComponent() { if (S.route.name === 'component') { flushDraft(); savePendingToPhotos(); } }
+// In-app Back and Done: leave the screen during the tap, then step back through browser history,
+// so the Android back gesture/button and the app's own Back always agree.
+function back() { leaveComponent(); if (S.hIdx > 0) history.back(); else appBack(); }
+function appBack() { S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
+window.addEventListener('popstate', e => {
+  // Each app screen is one history entry, so the Android back gesture/button steps back one screen.
+  const idx = e.state?.idx || 0;
+  if (idx >= S.hIdx) { S.hIdx = idx; return; }   // a forward step (rare on phones) is ignored
+  leaveComponent();
+  while (S.hIdx > idx) { S.route = S.stack.pop() || { name: 'home' }; S.hIdx--; }
+  S.confirm = null; S.draft = null; render();
+});
+try { history.replaceState({ idx: 0 }, ''); } catch {}
 
 function inspectionsFor(bridgeId) { return Store.all('inspections').filter(i => i.bridgeId === bridgeId).sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || '')); }
 const itemsOf = insp => insp.items || {};
@@ -600,7 +620,8 @@ const gone = () => { setBar('Not found', 'Back'); return '<div class="card"><b>T
 function viewHome() {
   setBar('Bridge Site Inspection');
   const install = isStandalone() ? '' : `<div class="card warn"><b>Install on this phone to use it with no signal</b>
-    <span>${isIOS() ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>. Open the app from the new icon from then on.' : 'Open your browser menu and choose <b>Install app</b> or <b>Add to Home screen</b>. Open the app from the new icon from then on.'}</span>
+    <span>${isIOS() ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>. Open the app from the new icon from then on.' : installEvt ? 'Tap <b>Install app</b>. Open the app from the new icon from then on.' : 'In Chrome, tap the menu <b>⋮</b>, then <b>Install app</b> (or <b>Add to Home screen</b>). Open the app from the new icon from then on.'}</span>
+    ${installEvt ? '<button class="btn" data-act="install">Install app</button>' : ''}
     <span class="sub">Once installed it opens and saves with no signal. Inspections and photos are stored on this phone until you export them.</span></div>`;
   return `
   ${install}
@@ -664,8 +685,8 @@ function viewData() {
   <div class="sec"><div class="sec-h"><h3>Settings</h3></div>
     <button class="chip" aria-pressed="${gps}" data-act="gps-toggle">Tag photos with GPS location</button>
     <span class="sub">The phone's GPS works without mobile signal. Locations go into the picture index.</span>
-    <button class="chip" aria-pressed="${lsGet('bsi-camroll', true)}" data-act="camroll-toggle">Copy new photos to iPhone Photos when I tap Done</button>
-    <span class="sub">No questions while you take photos. When you tap <b>Done</b>, the new photos of that component are handed to iPhone together; tap <b>Save Images</b> once. Photos are always kept inside this app either way.</span></div>
+    <button class="chip" aria-pressed="${lsGet('bsi-camroll', true)}" data-act="camroll-toggle">${isAndroid() ? 'Save new photos to the phone gallery when I tap Done' : 'Copy new photos to iPhone Photos when I tap Done'}</button>
+    <span class="sub">${isAndroid() ? 'No questions while you take photos. When you tap <b>Done</b>, the new photos of that component are saved to <b>Downloads</b>, which Gallery and Google Photos show (the first time Chrome may ask to allow several downloads).' : 'No questions while you take photos. When you tap <b>Done</b>, the new photos of that component are handed to iPhone together; tap <b>Save Images</b> once.'} Photos are always kept inside this app either way.</span></div>
   <div class="sec"><div class="sec-h"><h3>Using it offline</h3></div>
     <span class="sub">Open the app once with signal after each update. From then on it opens and works with no signal. Voice: tap Speak, then the microphone on your keyboard (iPhone dictation works offline on recent iPhones; older ones need signal).</span></div>`;
 }
@@ -835,7 +856,7 @@ function viewReview(id) {
   <div class="sec"><div class="sec-h"><h3>Export</h3></div>
     <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
     <span class="sub">One folder named <span class="mono">${esc(pkgName(insp, b))}</span> with the Word report (summary table, then each picture captioned “Picture 1: Abutment 1 Pile No.1 - …”), every picture as its own file in <span class="mono">Photos/</span> (${t.photos ? esc(Object.values(names).slice(0, 2).join('.jpg, ')) + '.jpg …' : esc(b.components.filter(c => c.loc !== 'GEN').slice(0, 2).map(c => c.ph + '.jpg').join(', ') + ' …')}) and a picture index. Works offline.</span>
-    <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} Save all pictures to Photos</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div></div>
+    <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} ${isAndroid() ? 'Save all pictures to gallery' : 'Save all pictures to Photos'}</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div></div>
   ${S.confirm === 'del-insp' ? `<div class="confirm"><span class="grow">Delete this inspection and its photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-insp" data-id="${esc(id)}">Delete</button></div>`
     : `<button class="btn ghost" data-act="ask" data-what="del-insp">Delete inspection</button>`}`;
 }
@@ -863,7 +884,7 @@ const A = {
     const layout = {}; T.params.forEach(([k]) => layout[k] = f[k]); T.choices.forEach(([k]) => layout[k] = f[k]);
     const id = uid();
     await Store.put('bridges', id, { type: f.type, bridgeNo: f.bridgeNo.trim(), road: f.road.trim(), slk: f.slk.trim(), region: f.region.trim(), layout, components: generateComponents(f.type, layout), gps: null, createdAt: now() });
-    S.form = null; S.stack.pop(); S.level = 2; nav({ name: 'bridge', id }, true); toast('Saved on this device.');
+    S.form = null; S.level = 2; nav({ name: 'bridge', id }, true); toast('Saved on this device.');
   },
   async 'gps-here'() {
     toast('Getting location…'); const fix = await getFix(15000);
@@ -890,9 +911,9 @@ const A = {
   'open-comp'(d) { nav({ name: 'component', id: S.route.id, cid: d.cid }); },
   done(d) {
     const el = $('#cmt'); if (el && S.draft) S.draft.it.comment = el.value;
-    flushDraft(); S.lastCid = d.cid; back();
-    const insp = Store.get('inspections', S.route.id);
-    if (insp && S.route.name === 'checklist' && insp.status !== 'complete') toast(statusOf(itemsOf(insp)[d.cid], photosOf(insp, d.cid).length).done ? 'Saved.' : 'Nothing recorded for that component yet.');
+    flushDraft(); S.lastCid = d.cid; const inspId = S.route.id; back();
+    const insp = Store.get('inspections', inspId);
+    if (insp && insp.status !== 'complete') toast(statusOf(itemsOf(insp)[d.cid], photosOf(insp, d.cid).length).done ? 'Saved.' : 'Nothing recorded for that component yet.');
   },
   none() { const it = S.draft.it; it.none = !it.none; if (it.none) { it.defects = []; it.na = false; } touchDraft(); render(); },
   na() { const it = S.draft.it; it.na = !it.na; if (it.na) it.none = false; touchDraft(); render(); },
@@ -946,6 +967,7 @@ const A = {
     catch (e) { toast('Saved, but could not connect: ' + e.message); }
     render();
   },
+  async install() { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch {} installEvt = null; render(); },
   'sync-now'() { Sync.run(true); render(); },
   'camroll-toggle'() { lsSet('bsi-camroll', !lsGet('bsi-camroll', true)); render(); },
   async 'save-all-photos'(d) {
@@ -1044,13 +1066,23 @@ function showSheet(title, size, note, button) {
 function offerFile(name, blob) {
   const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
   ready = { name, blob, files: [file] };
-  if (!canShareFiles([file])) { downloadReady(); return; }
-  showSheet(name, fmtSize(blob.size), 'Ready. Share it to Files, OneDrive, SharePoint, Mail or AirDrop.', 'Share / Save');
+  if (canShareFiles([file])) { showSheet(name, fmtSize(blob.size), 'Ready. Share it to Files, OneDrive, SharePoint, Mail or AirDrop.', 'Share / Save'); return; }
+  if (isAndroid()) { ready.download = true; showSheet(name, fmtSize(blob.size), 'Ready. It saves to <b>Downloads</b>. Open it from the notification or the Files app, or share it from there to Drive, OneDrive or email.', 'Save to phone'); return; }
+  downloadReady();
+}
+function downloadBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 15000);
+}
+function saveImagesToDevice(files) {
+  files.forEach((f, i) => setTimeout(() => downloadBlob(f, f.name), i * 450));
+  toast(`${files.length} photo${files.length > 1 ? 's' : ''} saved to Downloads (Gallery / Google Photos).`);
 }
 /* Photos to the iPhone Photos app: the share sheet's "Save Image(s)" puts them in the camera roll;
    "Save to Files" keeps the component file names. */
 function offerPhotos(pics, auto) {
   const files = pics.map(x => new File([x.blob], x.file, { type: 'image/jpeg' }));
+  if (files.length && isAndroid()) { saveImagesToDevice(files); return; }
   if (!files.length || !canShareFiles(files)) { if (!auto) toast('Saving to Photos needs the iPhone or Android share sheet.'); return; }
   ready = { name: files.length === 1 ? files[0].name : `${files.length} photos`, files, photos: true };
   const one = files.length === 1;
@@ -1059,6 +1091,7 @@ function offerPhotos(pics, auto) {
 }
 async function shareReady() {
   if (!ready) return;
+  if (ready.download) { downloadReady(); return; }
   try { await navigator.share({ files: ready.files, title: ready.name }); closeSheet(); if (ready?.photos) toast('Shared.'); }
   catch (e) { if (e && e.name === 'AbortError') return; if (ready.photos) { toast('Could not open the share sheet.'); return; } downloadReady(); }
 }
@@ -1241,6 +1274,11 @@ async function applyRestore() {
     S.restore = null; render(); toast('Backup restored.'); Sync.soon(1000);
   } catch (e) { console.error(e); Store.setError('Restore failed: ' + (e.message || e)); }
 }
+
+/* ---------- Android install prompt ---------- */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (S.route.name === 'home') render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Bridge Inspect from your home screen.'); if (S.route.name === 'home') render(); });
 
 /* ---------- Boot ---------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline mode not available:', e));

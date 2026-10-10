@@ -73,7 +73,10 @@ How it behaves:
 Always open the app from the new **Bridge Inspect** icon (not from Safari): that is what
 keeps the data protected and lets it work offline.
 
-**Android (Chrome):** open the address → menu ⋮ → **Install app** (or *Add to Home screen*).
+**Android (Chrome):** open the address in **Chrome**. Tap the **Install app** button on the start
+page (or Chrome menu **⋮** → **Install app** / *Add to Home screen*) → **Install**. A
+**Bridge Inspect** icon appears on the home screen and in the app drawer. Open it from there.
+On Android the back gesture / back button steps back one screen inside the app.
 
 Open the app once from the icon while you still have signal; after that it works anywhere.
 
@@ -104,7 +107,13 @@ Photos app. iPhone always asks this once: web apps are never allowed to save to 
 Turn it off under **Data → Settings**. On the Review screen, **Save all pictures to Photos**
 does the whole inspection at once.
 
-Alternative with no extra tap: take photos with the iPhone Camera app (they go straight to
+**Android:** when you tap **Done**, the new photos of that component are saved straight to
+**Downloads** with their component names, and show up in **Gallery / Google Photos**
+(Library → Download). The first time, Chrome may ask to *allow multiple downloads* → **Allow**.
+Word reports and ZIP exports also save to **Downloads**; open them from the notification or the
+**Files** app, or share them from there to Drive, OneDrive or email.
+
+Alternative with no extra tap on iPhone: take photos with the iPhone Camera app (they go straight to
 Photos), then attach them in this app with **Choose several**.
 
 ## 4. Keep your data safe
@@ -118,5 +127,5 @@ Photos), then attach them in this app with **Choose several**.
 ## Updating the app later
 
 Upload the changed files to the same place and change `VERSION` at the top of `sw.js`
-(for example `bsi-v3` → `bsi-v4`). Phones pick up the new version the next time the app is
+(for example `bsi-v5` → `bsi-v6`). Phones pick up the new version the next time the app is
 opened with signal, and use it from the following launch. Inspections already on the phone are kept.
