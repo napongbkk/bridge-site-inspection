@@ -14,19 +14,25 @@
 <link rel="icon" href="icons/icon-192.png">
 <title>Bridge Site Inspection</title>
 <style>
-/* Layout: one-column field app, max 760px, sticky app bar; high contrast for sunlight. System fonts so it works offline. */
+/* Layout: one-column field app, max 760px, navy app bar with a safety-tape edge.
+   Palette: engineering-drawing navy + site-safety yellow on cool concrete grey; readable in sun.
+   System fonts so it works offline. */
 :root{
-  --bg:#EDEFEC; --card:#FFFFFF; --ink:#17201B; --muted:#4F5B55; --line:#D5DAD6; --well:#DDE1DE;
-  --accent:#B8430D; --accent-ink:#FFFFFF; --danger:#9E2A22; --field:#FFFFFF; --field-line:#C9CFCB; --press:#F6F7F5;
-  --ok:#CFE6D8; --ok-ink:#17201B; --def:#E9965A; --def-ink:#17201B;
-  --sans:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bg:#E7EBF0; --card:#FFFFFF; --ink:#0E1F3A; --muted:#4A5872; --line:#D2D9E3; --well:#DCE2EA;
+  --accent:#FFC21A; --accent-ink:#0E1F3A; --accent-line:#E0A200; --link:#1C4FA8;
+  --bar:#0E1F3A; --bar-ink:#FFFFFF; --bar-sub:#B7C4DA;
+  --danger:#B42318; --field:#FFFFFF; --field-line:#C2CBD8; --press:#F2F5F9;
+  --ok:#CDEBD8; --ok-ink:#0E1F3A; --def:#F2A15E; --def-ink:#0E1F3A;
+  --sans:-apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#121815; --card:#1B231F; --ink:#E9EEEA; --muted:#A7B3AC; --line:#2D3832; --well:#26302B;
-  --accent:#F08A4B; --accent-ink:#1A0F08; --danger:#E0655B; --field:#141B17; --field-line:#3A4640; --press:#222B26;
-  --ok:#2F5A44; --ok-ink:#E3F2E9; --def:#C9773F; --def-ink:#1A0F08;
+  --bg:#0A1424; --card:#122039; --ink:#E7EDF6; --muted:#9DABC2; --line:#22324F; --well:#1B2A45;
+  --accent:#FFC21A; --accent-ink:#0A1424; --accent-line:#FFC21A; --link:#8DB4FF;
+  --bar:#050D1A; --bar-ink:#FFFFFF; --bar-sub:#9DABC2;
+  --danger:#FF7A6B; --field:#0E1A2E; --field-line:#2E4166; --press:#17284A;
+  --ok:#1F5A3C; --ok-ink:#DDF5E6; --def:#D9773A; --def-ink:#0A1424;
   color-scheme:dark }}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -35,10 +41,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15p
 img{max-width:100%}
 button,input,select,textarea{font:inherit;color:inherit}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink);padding-top:env(safe-area-inset-top,0px)}
+.bar::after{content:'';display:block;height:5px;background:repeating-linear-gradient(-45deg,var(--accent) 0 10px,var(--bar) 10px 20px)}
 .bar-in{max-width:760px;margin:0 auto;padding:8px max(16px, env(safe-area-inset-right,0px)) 8px max(16px, env(safe-area-inset-left,0px));display:flex;align-items:center;gap:8px;min-height:56px}
 .bar h1{flex:1;margin:0;font-size:17px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.save{font-size:12px;color:var(--bar-sub);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
 .save[data-s="saving"] .dot{background:#E4C65A} .save[data-s="error"] .dot{background:var(--danger)} .save[data-s="wait"] .dot{background:var(--def)}
 main{max-width:760px;margin:0 auto;padding:16px max(16px, env(safe-area-inset-right,0px)) calc(72px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
@@ -46,7 +53,7 @@ h2.big{margin:0;font-size:26px;font-weight:700;letter-spacing:-.4px;text-wrap:ba
 h2.hero{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.1;text-wrap:balance}
 .sub{font-size:13px;color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
-.card.hot{border:2px solid var(--accent)}
+.card.hot{border:2px solid var(--accent-line);box-shadow:inset 4px 0 0 var(--accent)}
 .sec{display:flex;flex-direction:column;gap:8px}
 .sec-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .sec-h h3{margin:0;font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
@@ -60,7 +67,7 @@ h2.hero{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height
 .btn.sm{min-height:38px;padding:0 12px;font-size:14px;border-radius:10px}
 .btn.block{width:100%}
 .btn:disabled{opacity:.45;cursor:default}
-.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.tap:focus-visible,.back:focus-visible,.tile:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.tap:focus-visible,.back:focus-visible,.tile:focus-visible{outline:3px solid var(--link);outline-offset:2px}
 .back{min-height:44px;padding:0 6px;border:0;background:transparent;color:var(--accent);font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:2px}
 .seg{display:flex;gap:4px;padding:4px;background:var(--well);border-radius:12px}
 .seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;font-size:14px;cursor:pointer;padding:0 6px}
@@ -73,17 +80,17 @@ h2.hero{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height
 .chip.nac[aria-pressed="true"]{background:var(--well);border-color:var(--muted);color:var(--ink)}
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:4px 8px;border-radius:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
 .b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well)} .b-note{background:var(--well)}
-.b-todo{border:1.5px solid var(--accent);color:var(--accent)}
+.b-todo{border:1.5px solid var(--link);color:var(--link)}
 .pill{font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px;background:var(--well);white-space:nowrap}
 .pill.hot{background:var(--accent);color:var(--accent-ink)}
 label.f{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
 label.f span{font-size:13px;color:var(--muted);font-weight:500}
 input.in,select.in,textarea.in{min-height:48px;border-radius:12px;border:1px solid var(--field-line);background:var(--field);padding:0 14px;font-size:16px;width:100%}
 textarea.in{min-height:96px;padding:12px 14px;resize:vertical}
-input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--link);outline-offset:0;border-color:transparent}
 .tap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:60px;cursor:pointer}
 .tap:hover{background:var(--press)}
-.tap.just{border:2px solid var(--accent);background:var(--press)}
+.tap.just{border:2px solid var(--accent-line);background:var(--press)}
 .code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);width:60px;flex:0 0 auto}
 .facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .facts div{background:var(--card);padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -96,18 +103,18 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--accent)
 .step b{width:32px;text-align:center;font-family:var(--mono);font-size:18px}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media (max-width:340px){.tiles{grid-template-columns:minmax(0,1fr)}}
-.tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;min-height:150px}
-.tile:hover{border-color:var(--ink)}
-.tile svg{color:var(--accent)}
+.tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;text-align:left;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;min-height:124px;box-shadow:0 1px 0 var(--line)}
+.tile:hover{border-color:var(--accent-line)}
+.tile:active{transform:translateY(1px)}
+.ticon{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:12px;background:var(--bar);color:var(--accent);flex:0 0 auto}
 .tile b{font-size:17px}
-.tile .go{margin-top:auto;font-size:13px;font-weight:600;color:var(--accent)}
 .tico{color:var(--muted);display:inline-flex}
 .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
 .ph{position:relative;aspect-ratio:1;max-width:100%;border-radius:10px;overflow:hidden;background:var(--well)}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .ph .pname{position:absolute;left:0;right:0;bottom:0;padding:3px 5px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--mono);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ph button{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:15px;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:16px;line-height:1}
-.warn{border:1.5px solid var(--accent)}
+.warn{border:1.5px solid var(--accent-line);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
 .confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-radius:12px;background:var(--well)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
 .stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
@@ -633,9 +640,9 @@ function viewHome() {
     <div class="chips" role="group" aria-label="Filter by type">
       ${[['all', 'All'], ...Object.entries(TEMPLATES).map(([k, t]) => [k, t.name.replace(' bridge', '')])].map(([k, l]) => `<button class="chip" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}">${esc(l)}</button>`).join('')}</div>
     <div id="blist" class="sec">${bridgeList()}</div></div>
-  <div class="sec" id="new-bridge" style="padding-top:8px;border-top:1px solid var(--line)"><div class="sec-h"><h3>Set up a new bridge</h3><span class="sub">Pick the type</span></div>
+  <div class="sec" id="new-bridge" style="padding-top:8px;border-top:1px solid var(--line)"><div class="sec-h"><h3>Set up a new bridge</h3></div>
     <div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
-      <button class="tile" data-act="new" data-type="${k}">${typeIcon(k)}<b>${esc(t.name)}</b><span class="sub">${esc(t.blurb)}</span><span class="go">Set up →</span></button>`).join('')}</div></div>`;
+      <button class="tile" data-act="new" data-type="${k}" aria-label="Set up a new ${esc(t.name.toLowerCase())}"><span class="ticon">${typeIcon(k, 44, 28)}</span><b>${esc(t.name)}</b></button>`).join('')}</div></div>`;
 }
 function bridgeList() {
   const t = S.q.trim().toLowerCase();
@@ -707,7 +714,7 @@ function viewAdd() {
     <button data-act="step" data-k="${k}" data-d="1" data-min="${min}" data-max="${max}" aria-label="Increase ${label}">+</button></div>`;
   const locSeq = locs.length > 9 ? [...locs.slice(0, 4), '…', ...locs.slice(-3)] : locs;
   return `
-  <div class="row" style="gap:12px"><span style="color:var(--accent)">${typeIcon(f.type)}</span><h2 class="big">${esc(T.name)}</h2></div>
+  <div class="row" style="gap:12px"><span class="ticon">${typeIcon(f.type, 44, 28)}</span><h2 class="big">${esc(T.name)}</h2></div>
   <div class="sec"><div class="sec-h"><h3>Identification</h3></div>
     <label class="f"><span>Bridge / structure No.</span><input class="in" id="f-bridgeNo" data-in="form" data-k="bridgeNo" value="${esc(f.bridgeNo)}" placeholder="e.g. 0412" autocapitalize="characters"></label>
     <div class="row wrap" style="align-items:flex-start">
@@ -736,7 +743,7 @@ function viewBridge(id) {
       <div class="seg" role="group" aria-label="Inspection level">${[2, 1].map(n => `<button aria-pressed="${S.level === n}" data-act="lvl" data-v="${n}">${LEVELS[n]}</button>`).join('')}</div>
       <button class="btn block" data-act="start">Start inspection</button></div>`;
   return `
-  <div class="row" style="gap:12px;align-items:flex-start"><span style="color:var(--accent);padding-top:2px">${typeIcon(typeOf(b), 48, 30)}</span>
+  <div class="row" style="gap:12px;align-items:flex-start"><span class="ticon">${typeIcon(typeOf(b), 44, 28)}</span>
     <div class="grow"><span class="mono sub" style="font-weight:600">${esc(T.name)} ${esc(b.bridgeNo)}${b.region ? ' · ' + esc(b.region) : ''}</span>
     <h2 class="big">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(', ') || 'Structure')}</h2></div></div>
   <div class="facts">${factsOf(b).map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v)}</b></div>`).join('')}<div><span class="sub">Components</span><b>${b.components.length}</b></div></div>
@@ -750,7 +757,7 @@ function viewBridge(id) {
     ${list.length ? list.map(i => { const t = tally(i, b);
       return `<button class="tap" data-act="${i.status === 'complete' ? 'open-review' : 'open-insp'}" data-id="${esc(i.id)}">
       <span class="grow">${esc(LEVELS[i.level])} · ${fmtDate(i.completedAt || i.startedAt)}<br><span class="sub">${t.def} with defects · ${t.photos} photos${i.inspector ? ' · ' + esc(i.inspector) : ''}</span></span>
-      <span class="sub" style="${i.status !== 'complete' ? 'color:var(--accent);font-weight:600' : ''}">${i.status === 'complete' ? 'Complete' : 'In progress'}</span>${ICON.chev}</button>`; }).join('')
+      <span class="sub" style="${i.status !== 'complete' ? 'color:var(--link);font-weight:600' : ''}">${i.status === 'complete' ? 'Complete' : 'In progress'}</span>${ICON.chev}</button>`; }).join('')
       : '<span class="sub">No inspections yet.</span>'}</div>
   ${S.confirm === 'del-bridge' ? `<div class="confirm"><span class="grow">Delete ${esc(b.bridgeNo)} and all its inspections and photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-bridge" data-id="${esc(id)}">Delete</button></div>`
     : `<button class="btn ghost" data-act="ask" data-what="del-bridge">Delete bridge</button>`}`;
