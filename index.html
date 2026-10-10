@@ -519,9 +519,21 @@ function onRemoteChange() {
 /* =========================================================================
    State, routing, helpers
    ========================================================================= */
-const S = { route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
+const S = { newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
 function nav(route, replace) { if (!replace) S.stack.push(S.route); S.route = route; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0); }
-function back() { if (S.route.name === 'component') flushDraft(); S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
+/* Leaving a component (Done or Back): hand its new camera photos to iPhone in one go.
+   The tap that leaves the screen is what lets the share sheet open; iPhone then asks
+   once ("Save Images"), because web apps are never allowed to save to Photos silently. */
+function savePendingToPhotos() {
+  const list = S.newPhotos; S.newPhotos = [];
+  if (!list.length || !lsGet('bsi-camroll', true)) return;
+  const insp = Store.get('inspections', list[0].inspId), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
+  const names = photoNames(insp, b), keep = list.filter(x => insp.photos?.[x.id] && !insp.photos[x.id].deleted);
+  const files = keep.map(x => new File([x.blob], (names[x.id] || x.id) + '.jpg', { type: 'image/jpeg' }));
+  if (!files.length || !canShareFiles(files)) return;
+  navigator.share({ files }).then(() => toast(`${files.length} photo${files.length > 1 ? 's' : ''} sent to iPhone.`)).catch(() => {});
+}
+function back() { if (S.route.name === 'component') { flushDraft(); savePendingToPhotos(); } S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
 
 function inspectionsFor(bridgeId) { return Store.all('inspections').filter(i => i.bridgeId === bridgeId).sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || '')); }
 const itemsOf = insp => insp.items || {};
@@ -652,8 +664,8 @@ function viewData() {
   <div class="sec"><div class="sec-h"><h3>Settings</h3></div>
     <button class="chip" aria-pressed="${gps}" data-act="gps-toggle">Tag photos with GPS location</button>
     <span class="sub">The phone's GPS works without mobile signal. Locations go into the picture index.</span>
-    <button class="chip" aria-pressed="${lsGet('bsi-camroll', true)}" data-act="camroll-toggle">Offer to save new photos to iPhone Photos</button>
-    <span class="sub">After each camera photo, one tap on <b>Save Image</b> also keeps a copy in the Photos app. Photos are always kept inside this app either way.</span></div>
+    <button class="chip" aria-pressed="${lsGet('bsi-camroll', true)}" data-act="camroll-toggle">Copy new photos to iPhone Photos when I tap Done</button>
+    <span class="sub">No questions while you take photos. When you tap <b>Done</b>, the new photos of that component are handed to iPhone together; tap <b>Save Images</b> once. Photos are always kept inside this app either way.</span></div>
   <div class="sec"><div class="sec-h"><h3>Using it offline</h3></div>
     <span class="sub">Open the app once with signal after each update. From then on it opens and works with no signal. Voice: tap Speak, then the microphone on your keyboard (iPhone dictation works offline on recent iPhones; older ones need signal).</span></div>`;
 }
@@ -1001,20 +1013,16 @@ async function onPhotos(files) {
   for (const f of files) {
     try {
       Store.pending++; Store.status();
-      const id = await Store.savePhoto(await fitPhoto(f), inspId);
+      const blob = await fitPhoto(f), id = await Store.savePhoto(blob, inspId);
       const t = now();
       await Store.patch('inspections', inspId, { photos: { [id]: { componentId: tgt.cid, takenAt: t, updatedAt: t } } });
       added.push(id);
+      // Camera shots are not in the iPhone Photos app yet: keep them ready to hand over when Done is tapped.
+      if (tgt.camera) S.newPhotos.push({ id, blob, inspId, cid: tgt.cid });
     } catch (e) { Store.setError('Photo not saved: ' + (e.message || e)); }
     finally { Store.pending--; Store.status(); }
   }
   render(); if (added.length > 1) toast(`${added.length} photos added.`);
-  // Camera photos are not in the Photos app yet: offer to save them there (library picks already are).
-  if (added.length && tgt.camera && lsGet('bsi-camroll', true)) {
-    const insp = Store.get('inspections', inspId), b = Store.get('bridges', insp.bridgeId), names = photoNames(insp, b);
-    const pics = []; for (const id of added) { const blob = await Store.photoBlob(id); if (blob) pics.push({ blob, file: names[id] + '.jpg' }); }
-    offerPhotos(pics, true);
-  }
   if (added.length && lsGet('bsi-gps', true)) getFix(8000).then(fix => { if (fix) Store.patch('inspections', inspId, { photos: Object.fromEntries(added.map(id => [id, { lat: fix.lat, lng: fix.lng, acc: fix.acc }])) }); });
 }
 $('#photo-in').addEventListener('change', e => onPhotos(e.target.files));

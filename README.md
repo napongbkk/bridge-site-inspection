@@ -97,14 +97,15 @@ The export ZIP contains:
 - the inspection data (JSON)
 
 ### Photos in the iPhone Photos app
-Every photo is always kept inside the app. A web app is not allowed to write into the Photos
-app by itself, so after each camera photo the app offers **Save to Photos**: tap it, then
-**Save Image** in the share sheet. (Choose **Save to Files** instead to keep the component file
-name such as `Abut1_P1.jpg`.) On the Review screen, **Save all pictures to Photos** does the
-whole inspection at once. Turn the after-each-photo offer off under **Data → Settings**.
+Every photo is always kept inside the app. Nothing interrupts you while taking photos.
+When you tap **Done** on a component, its new camera photos are handed to iPhone together
+(named e.g. `Pier1_C1.jpg`, `Pier1_C1_2.jpg`); tap **Save Images** once to keep them in the
+Photos app. iPhone always asks this once: web apps are never allowed to save to Photos silently.
+Turn it off under **Data → Settings**. On the Review screen, **Save all pictures to Photos**
+does the whole inspection at once.
 
-Alternative: take photos with the iPhone Camera app (they go straight to Photos), then attach
-them in the app with **Choose several**.
+Alternative with no extra tap: take photos with the iPhone Camera app (they go straight to
+Photos), then attach them in this app with **Choose several**.
 
 ## 4. Keep your data safe
 
