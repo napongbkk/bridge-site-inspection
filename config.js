@@ -3,5 +3,5 @@
 // and every phone syncs to the same Google Sheet and Drive folder.
 // A URL entered in the app under Data → Online sync overrides this on that phone.
 window.BSI_CONFIG = {
-  syncUrl: '',
+  syncUrl: 'https://script.google.com/macros/s/AKfycbxxlf2B4ZANRx60-Z5lJPvxjpFJIuv3yGfSSjBWKp5qQ090numV5N4343D4LTSpDjpd/exec',
 };
