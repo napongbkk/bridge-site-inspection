@@ -626,22 +626,23 @@ function viewHome() {
   return `
   ${install}
   <div class="row between" style="align-items:flex-start"><div class="sec grow"><h2 class="hero">Bridge site inspection</h2>
-    <span class="sub">Pick a bridge type to set up its inspection template.</span></div>
+    <span class="sub">Your bridges are below. To add another, set up a new bridge at the bottom.</span></div>
     <button class="btn ghost sm" data-act="data" aria-label="Data and backup">${ICON.db} Data</button></div>
-  <div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
-    <button class="tile" data-act="new" data-type="${k}">${typeIcon(k)}<b>${esc(t.name)}</b><span class="sub">${esc(t.blurb)}</span><span class="go">Set up →</span></button>`).join('')}</div>
   <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">Stored on this device</span></div>
     <label class="f"><span class="sr">Search bridges</span><input class="in" id="q" type="search" placeholder="Bridge No., road, SLK or region" value="${esc(S.q)}" data-in="q" autocomplete="off"></label>
     <div class="chips" role="group" aria-label="Filter by type">
       ${[['all', 'All'], ...Object.entries(TEMPLATES).map(([k, t]) => [k, t.name.replace(' bridge', '')])].map(([k, l]) => `<button class="chip" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}">${esc(l)}</button>`).join('')}</div>
-    <div id="blist" class="sec">${bridgeList()}</div></div>`;
+    <div id="blist" class="sec">${bridgeList()}</div></div>
+  <div class="sec" id="new-bridge" style="padding-top:8px;border-top:1px solid var(--line)"><div class="sec-h"><h3>Set up a new bridge</h3><span class="sub">Pick the type</span></div>
+    <div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
+      <button class="tile" data-act="new" data-type="${k}">${typeIcon(k)}<b>${esc(t.name)}</b><span class="sub">${esc(t.blurb)}</span><span class="go">Set up →</span></button>`).join('')}</div></div>`;
 }
 function bridgeList() {
   const t = S.q.trim().toLowerCase();
   const rows = Store.all('bridges').filter(b => (S.ft === 'all' || typeOf(b) === S.ft) && (!t || [b.bridgeNo, b.road, b.slk, b.region].some(x => String(x || '').toLowerCase().includes(t))))
     .sort((a, b) => String(a.bridgeNo).localeCompare(String(b.bridgeNo), 'en', { numeric: true }));
   if (!rows.length) return t || S.ft !== 'all' ? '<span class="sub">No bridge matches this search.</span>'
-    : '<div class="card"><b>No bridges yet</b><span class="sub">Pick a type above to set up your first bridge, or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
+    : '<div class="card"><b>No bridges yet</b><span class="sub">Pick a type under <b>Set up a new bridge</b> below, or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
   return rows.map(b => {
     const list = inspectionsFor(b.id), active = list.find(i => i.status !== 'complete'), last = list.find(i => i.status === 'complete');
     const tl = active ? tally(active, b) : null;
