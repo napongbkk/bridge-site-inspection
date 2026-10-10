@@ -724,36 +724,21 @@ const bridgeTitle = b => [b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(
 
 function viewHome() {
   setBar('Bridge Site Inspection');
-  const name = lsGet('bsi-inspector', '');
   const install = isStandalone() ? '' : `<div class="card warn"><b>Install on this phone to work with no signal</b>
     <span class="sub" style="color:var(--ink)">${isIOS() ? 'In Safari tap <b>Share</b> → <b>Add to Home Screen</b>, then open the app from its icon.' : installEvt ? 'Tap <b>Install app</b>, then open the app from its icon.' : 'In Chrome tap <b>⋮</b> → <b>Install app</b>, then open the app from its icon.'}</span>
     ${installEvt ? '<button class="btn yellow sm" data-act="install">Install app</button>' : ''}</div>`;
 
-  // Week strip (Sun–Sat), selected day defaults to today; a dot marks days with inspection activity.
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const sel = S.day ? new Date(S.day) : today;
-  const start = new Date(sel); start.setDate(sel.getDate() - sel.getDay());
-  const insps = Store.all('inspections');
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start.getTime() + i * DAY); return { d, has: insps.some(x => touched(x).some(t => sameDay(t, d))) }; });
-  const dayList = insps.filter(x => touched(x).some(t => sameDay(t, sel))).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-
   // In-progress inspections as pastel cards.
+  const insps = Store.all('inspections');
   const active = insps.filter(i => i.status !== 'complete' && Store.get('bridges', i.bridgeId)).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 
   return `
   <div class="hello">
-    <div class="avatar" aria-hidden="true">${esc(initials(name))}</div>
-    <div class="grow"><span class="sub">${greeting()}${name ? ',' : ''}</span><div style="font-size:18px;font-weight:800">${esc(name || 'Inspector')}</div></div>
+    <h2 class="hero grow">Bridge site inspection</h2>
     <button class="icb" data-act="sync-now" aria-label="Sync now">${ICON.sync}${Store.dirty ? '<span class="badge-dot"></span>' : ''}</button>
   </div>
   ${install}
   <label class="search"><span class="sr">Search bridges</span><input id="q" type="search" placeholder="Search bridge No., road or SLK" value="${esc(S.q)}" data-in="q" autocomplete="off">${ICON.search}</label>
-
-  <div class="week" role="group" aria-label="This week">
-    ${days.map(({ d, has }) => `<button class="day ${has ? 'has' : ''}" aria-pressed="${sameDay(d, sel)}" data-act="day" data-v="${d.toISOString()}" aria-label="${d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}${has ? ', has inspections' : ''}">${d.toLocaleDateString('en-AU', { weekday: 'short' })}<b>${d.getDate()}</b></button>`).join('')}
-  </div>
-  ${dayList.length ? `<div class="sec"><div class="sec-h"><h3>${sameDay(sel, today) ? 'Today' : sel.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })}</h3></div>
-    ${dayList.slice(0, 3).map(i => inspRow(i)).join('')}</div>` : ''}
 
   ${active.length ? `<div class="sec"><div class="sec-h"><h3>In progress</h3><button class="more" data-act="tab" data-v="inspections">See all</button></div>
     <div class="hscroll">${active.map(i => { const b = Store.get('bridges', i.bridgeId), t = tally(i, b), pct = Math.round(t.done / t.total * 100);
