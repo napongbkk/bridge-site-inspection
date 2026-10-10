@@ -14,112 +14,187 @@
 <link rel="icon" href="icons/icon-192.png">
 <title>Bridge Site Inspection</title>
 <style>
-/* Layout: one-column field app, max 760px, navy app bar with a safety-tape edge.
-   Palette: engineering-drawing navy + site-safety yellow on cool concrete grey; readable in sun.
-   System fonts so it works offline. */
+/* Layout: soft, light field app — pastel cards, pill controls, round icon buttons, week strip,
+   horizontal "in progress" cards, bottom tab bar with a centre + button. Max width 760px.
+   Palette: near-white ground, white cards with soft shadows, near-black ink, golden-yellow highlight,
+   one pastel per bridge type. System fonts so it works offline. */
 :root{
-  --bg:#E7EBF0; --card:#FFFFFF; --ink:#0E1F3A; --muted:#4A5872; --line:#D2D9E3; --well:#DCE2EA;
-  --accent:#FFC21A; --accent-ink:#0E1F3A; --accent-line:#E0A200; --link:#1C4FA8;
-  --bar:#0E1F3A; --bar-ink:#FFFFFF; --bar-sub:#B7C4DA;
-  --danger:#B42318; --field:#FFFFFF; --field-line:#C2CBD8; --press:#F2F5F9;
-  --ok:#CDEBD8; --ok-ink:#0E1F3A; --def:#F2A15E; --def-ink:#0E1F3A;
-  --sans:-apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bg:#F4F5F7; --card:#FFFFFF; --ink:#16181D; --muted:#7A808C; --line:#ECEEF2; --well:#EEF0F4;
+  --accent:#16181D; --accent-ink:#FFFFFF;                 /* primary buttons: black pills */
+  --hi:#F6BB2C; --hi-ink:#16181D; --accent-line:#F6BB2C;  /* selected / highlight: golden yellow */
+  --link:#2F6FDE; --danger:#E5484D; --field:#FFFFFF; --field-line:#E6E8EE; --press:#F7F8FA;
+  --ok:#DFF3E5; --ok-ink:#1D6B3A; --def:#FFE4CC; --def-ink:#9A4A0B; --def-bar:#F08A3E;
+  --t-timber:#FDE8DA; --t-timber-ink:#B8582A; --t-concrete:#E3ECFA; --t-concrete-ink:#2F62B0;
+  --t-steel:#ECE6FA; --t-steel-ink:#6A4FC0; --t-underpass:#E0F3E8; --t-underpass-ink:#2B8653;
+  --shadow:0 6px 22px rgba(22,24,29,.07); --shadow-sm:0 2px 8px rgba(22,24,29,.06);
+  --r:20px;
+  --sans:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#0A1424; --card:#122039; --ink:#E7EDF6; --muted:#9DABC2; --line:#22324F; --well:#1B2A45;
-  --accent:#FFC21A; --accent-ink:#0A1424; --accent-line:#FFC21A; --link:#8DB4FF;
-  --bar:#050D1A; --bar-ink:#FFFFFF; --bar-sub:#9DABC2;
-  --danger:#FF7A6B; --field:#0E1A2E; --field-line:#2E4166; --press:#17284A;
-  --ok:#1F5A3C; --ok-ink:#DDF5E6; --def:#D9773A; --def-ink:#0A1424;
+  --bg:#0F1115; --card:#1A1D23; --ink:#F2F3F5; --muted:#9097A3; --line:#262A32; --well:#22262E;
+  --accent:#F2F3F5; --accent-ink:#0F1115; --hi:#F6BB2C; --hi-ink:#16181D; --accent-line:#F6BB2C;
+  --link:#7FA8FF; --danger:#FF6B6B; --field:#15181D; --field-line:#2A2F38; --press:#20242B;
+  --ok:#1E3A28; --ok-ink:#9BE3B2; --def:#3D2A1A; --def-ink:#FFB27A; --def-bar:#E58A45;
+  --t-timber:#3A2A20; --t-timber-ink:#F2A776; --t-concrete:#1F2C42; --t-concrete-ink:#8DB4F5;
+  --t-steel:#2A2440; --t-steel-ink:#B9A4F5; --t-underpass:#1B3326; --t-underpass-ink:#86D6A6;
+  --shadow:0 6px 22px rgba(0,0,0,.35); --shadow-sm:0 2px 8px rgba(0,0,0,.3);
   color-scheme:dark }}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 img{max-width:100%}
 button,input,select,textarea{font:inherit;color:inherit}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.bar{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink);padding-top:env(safe-area-inset-top,0px)}
-.bar::after{content:'';display:block;height:5px;background:repeating-linear-gradient(-45deg,var(--accent) 0 10px,var(--bar) 10px 20px)}
-.bar-in{max-width:760px;margin:0 auto;padding:8px max(16px, env(safe-area-inset-right,0px)) 8px max(16px, env(safe-area-inset-left,0px));display:flex;align-items:center;gap:8px;min-height:56px}
-.bar h1{flex:1;margin:0;font-size:17px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.save{font-size:12px;color:var(--bar-sub);display:flex;align-items:center;gap:6px;white-space:nowrap}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
-.save[data-s="saving"] .dot{background:#E4C65A} .save[data-s="error"] .dot{background:var(--danger)} .save[data-s="wait"] .dot{background:var(--def)}
-main{max-width:760px;margin:0 auto;padding:16px max(16px, env(safe-area-inset-right,0px)) calc(72px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
-h2.big{margin:0;font-size:26px;font-weight:700;letter-spacing:-.4px;text-wrap:balance}
-h2.hero{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.1;text-wrap:balance}
+
+/* Top bar (inner screens): round back button, title, sync status */
+.bar{position:sticky;top:0;z-index:5;background:color-mix(in srgb, var(--bg) 92%, transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding-top:env(safe-area-inset-top,0px)}
+.bar-in{max-width:760px;margin:0 auto;padding:10px max(16px, env(safe-area-inset-right,0px)) 10px max(16px, env(safe-area-inset-left,0px));display:flex;align-items:center;gap:12px;min-height:60px}
+.bar h1{flex:1;margin:0;font-size:17px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{width:42px;height:42px;flex:0 0 auto;border:0;border-radius:50%;background:var(--card);box-shadow:var(--shadow-sm);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.back span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;background:var(--card);padding:7px 11px;border-radius:999px;box-shadow:var(--shadow-sm)}
+.dot{width:8px;height:8px;border-radius:50%;background:#34C17A}
+.save[data-s="saving"] .dot{background:var(--hi)} .save[data-s="error"] .dot{background:var(--danger)} .save[data-s="wait"] .dot{background:var(--def-bar)}
+body.home .bar{display:none}
+
+main{max-width:760px;margin:0 auto;padding:12px max(16px, env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+body.has-tabs main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+body.home main{padding-top:calc(14px + env(safe-area-inset-top,0px))}
+h2.big{margin:0;font-size:26px;font-weight:800;letter-spacing:-.5px;text-wrap:balance}
+h2.hero{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1.15;text-wrap:balance}
 .sub{font-size:13px;color:var(--muted)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
-.card.hot{border:2px solid var(--accent-line);box-shadow:inset 4px 0 0 var(--accent)}
-.sec{display:flex;flex-direction:column;gap:8px}
+.card{background:var(--card);border:0;border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.card.hot{box-shadow:var(--shadow),inset 0 0 0 2px var(--hi)}
+.sec{display:flex;flex-direction:column;gap:10px}
 .sec-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.sec-h h3{margin:0;font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.sec-h h3{margin:0;font-size:18px;font-weight:800;letter-spacing:-.2px;color:var(--ink)}
+.sec-h .more{border:0;background:none;color:var(--muted);font-size:14px;cursor:pointer;padding:6px 0}
 .row{display:flex;align-items:center;gap:10px}
 .between{justify-content:space-between}
 .wrap{flex-wrap:wrap}
 .grow{flex:1;min-width:0}
-.btn{min-height:48px;padding:0 16px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;text-decoration:none}
-.btn.dark{background:var(--ink);color:var(--bg)} .btn.out{background:var(--card);color:var(--ink);border:1.5px solid var(--ink)}
+
+/* Buttons: pills */
+.btn{min-height:50px;padding:0 20px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;text-decoration:none}
+.btn.dark{background:var(--accent);color:var(--accent-ink)}
+.btn.yellow{background:var(--hi);color:var(--hi-ink)}
+.btn.out{background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--field-line)}
 .btn.ghost{background:transparent;color:var(--ink)} .btn.danger{background:var(--danger);color:#fff}
-.btn.sm{min-height:38px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn.sm{min-height:40px;padding:0 14px;font-size:14px}
 .btn.block{width:100%}
-.btn:disabled{opacity:.45;cursor:default}
-.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.tap:focus-visible,.back:focus-visible,.tile:focus-visible{outline:3px solid var(--link);outline-offset:2px}
-.back{min-height:44px;padding:0 6px;border:0;background:transparent;color:var(--accent);font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:2px}
-.seg{display:flex;gap:4px;padding:4px;background:var(--well);border-radius:12px}
-.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;font-size:14px;cursor:pointer;padding:0 6px}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{min-height:40px;padding:0 13px;border-radius:20px;border:1px solid var(--field-line);background:var(--card);font-size:14px;cursor:pointer;white-space:nowrap;flex:0 0 auto}
-.chips.loc .chip{min-height:38px;padding:0 11px;font-size:13.5px}
-.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:600}
-.chip.okc[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--ok-ink)}
-.chip.nac[aria-pressed="true"]{background:var(--well);border-color:var(--muted);color:var(--ink)}
-.badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:4px 8px;border-radius:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
-.b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well)} .b-note{background:var(--well)}
-.b-todo{border:1.5px solid var(--link);color:var(--link)}
-.pill{font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px;background:var(--well);white-space:nowrap}
-.pill.hot{background:var(--accent);color:var(--accent-ink)}
-label.f{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
-label.f span{font-size:13px;color:var(--muted);font-weight:500}
-input.in,select.in,textarea.in{min-height:48px;border-radius:12px;border:1px solid var(--field-line);background:var(--field);padding:0 14px;font-size:16px;width:100%}
-textarea.in{min-height:96px;padding:12px 14px;resize:vertical}
-input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--link);outline-offset:0;border-color:transparent}
-.tap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:60px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:active,.tap:active,.tile:active,.icb:active{transform:scale(.98)}
+.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.tap:focus-visible,.back:focus-visible,.tile:focus-visible,.icb:focus-visible,.day:focus-visible,.tabs button:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+.icb{width:44px;height:44px;flex:0 0 auto;border:0;border-radius:50%;background:var(--card);box-shadow:var(--shadow-sm);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;position:relative}
+.icb.yellow{background:var(--hi);color:var(--hi-ink)}
+.icb.soft{background:var(--well);box-shadow:none}
+.icb .badge-dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--def-bar);box-shadow:0 0 0 2px var(--card)}
+
+/* Segmented control: soft track, white thumb */
+.seg{display:flex;gap:4px;padding:4px;background:var(--well);border-radius:999px}
+.seg button{flex:1;min-height:40px;border:0;border-radius:999px;background:transparent;font-size:14px;cursor:pointer;padding:0 8px;color:var(--muted);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm)}
+
+/* Chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:42px;padding:0 16px;border-radius:999px;border:0;background:var(--card);box-shadow:var(--shadow-sm);font-size:14px;cursor:pointer;white-space:nowrap;flex:0 0 auto;color:var(--ink)}
+.chips.loc .chip{min-height:38px;padding:0 13px;font-size:13.5px}
+.chip[aria-pressed="true"]{background:var(--hi);color:var(--hi-ink);font-weight:700}
+.chip.okc[aria-pressed="true"]{background:var(--ok);color:var(--ok-ink)}
+.chip.nac[aria-pressed="true"]{background:var(--well);color:var(--ink)}
+.cat{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:6px 18px 6px 6px;border-radius:999px;border:0;background:var(--card);box-shadow:var(--shadow-sm);cursor:pointer;font-size:15px;font-weight:600;color:var(--ink)}
+.cat .ci{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.cat[aria-pressed="true"]{box-shadow:var(--shadow-sm),inset 0 0 0 2px var(--hi)}
+
+/* Badges and pills */
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well);color:var(--muted)} .b-note{background:var(--well)}
+.b-todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--link);color:var(--link)}
+.pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--well);white-space:nowrap}
+.pill.hot{background:var(--hi);color:var(--hi-ink)}
+
+/* Fields */
+label.f{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+label.f span{font-size:13px;color:var(--muted);font-weight:600}
+input.in,select.in,textarea.in{min-height:52px;border-radius:16px;border:0;box-shadow:inset 0 0 0 1px var(--field-line);background:var(--field);padding:0 16px;font-size:16px;width:100%}
+textarea.in{min-height:104px;padding:14px 16px;resize:vertical}
+input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0 0 0 2px var(--link)}
+.search{display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 20px;border-radius:999px;background:var(--card);box-shadow:var(--shadow-sm)}
+.search input{flex:1;min-width:0;border:0;background:transparent;font-size:16px;outline:none;height:100%}
+.search svg{color:var(--muted);flex:0 0 auto;margin-right:10px}
+
+/* Lists */
+.tap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:0;border-radius:18px;padding:12px 14px;min-height:64px;cursor:pointer;box-shadow:var(--shadow-sm);color:var(--ink)}
 .tap:hover{background:var(--press)}
-.tap.just{border:2px solid var(--accent-line);background:var(--press)}
-.code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);width:60px;flex:0 0 auto}
-.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.facts div{background:var(--card);padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.facts b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.tap.just{box-shadow:var(--shadow-sm),inset 0 0 0 2px var(--hi)}
+.code{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--muted);width:58px;flex:0 0 auto}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.facts div{background:var(--card);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0;box-shadow:var(--shadow-sm)}
+.facts b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
 @media (min-width:640px){.facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex} .prog i{display:block;height:100%}
-.step{display:flex;align-items:center;gap:10px;min-height:52px}
-.step span.l{flex:1}
-.step button{width:44px;height:44px;border-radius:10px;border:1px solid var(--field-line);background:var(--press);font-size:22px;cursor:pointer}
-.step b{width:32px;text-align:center;font-family:var(--mono);font-size:18px}
-.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.prog{height:10px;border-radius:999px;background:var(--well);overflow:hidden;display:flex} .prog i{display:block;height:100%}
+.step{display:flex;align-items:center;gap:10px;min-height:56px}
+.step span.l{flex:1;font-weight:600}
+.step button{width:44px;height:44px;border-radius:50%;border:0;background:var(--well);font-size:22px;cursor:pointer;color:var(--ink)}
+.step b{width:34px;text-align:center;font-family:var(--mono);font-size:18px}
+
+/* Home: greeting, week strip, in-progress cards, bridge rows */
+.hello{display:flex;align-items:center;gap:12px}
+.avatar{width:48px;height:48px;border-radius:50%;background:var(--hi);color:var(--hi-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:0 0 auto}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;background:var(--card);border-radius:var(--r);padding:12px 8px;box-shadow:var(--shadow-sm)}
+.day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 10px;border:0;border-radius:999px;background:transparent;cursor:pointer;color:var(--muted);font-size:12px;position:relative}
+.day b{font-size:16px;color:var(--ink);font-weight:700}
+.day[aria-pressed="true"]{background:var(--hi);color:var(--hi-ink)} .day[aria-pressed="true"] b{color:var(--hi-ink)}
+.day.has::after{content:'';position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:var(--def-bar)}
+.day[aria-pressed="true"].has::after{background:var(--hi-ink)}
+.hscroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 8px;margin:0 -2px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.icard{flex:0 0 min(70%, 230px);scroll-snap-align:start;border:0;border-radius:var(--r);padding:14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:10px;color:var(--ink)}
+.icard .top{display:flex;justify-content:space-between;align-items:center}
+.icard .ring{font-size:12px;font-weight:700;background:var(--card);border-radius:999px;padding:4px 9px}
+.icard b{font-size:16px;color:var(--ink)}
+.icard .sub{color:var(--ink);opacity:.7}
+.icard .bar2{height:6px;border-radius:999px;background:color-mix(in srgb, var(--card) 70%, transparent);overflow:hidden} .icard .bar2 i{display:block;height:100%;background:var(--ink)}
+.brow{display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:0;border-radius:var(--r);padding:14px;box-shadow:var(--shadow-sm);text-align:left;cursor:pointer;color:var(--ink)}
+.brow .when{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink);margin-top:8px}
+.ticon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;flex:0 0 auto}
+.t-timber{background:var(--t-timber);color:var(--t-timber-ink)} .t-concrete{background:var(--t-concrete);color:var(--t-concrete-ink)}
+.t-steel{background:var(--t-steel);color:var(--t-steel-ink)} .t-underpass{background:var(--t-underpass);color:var(--t-underpass-ink)}
+.tico{display:inline-flex}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:340px){.tiles{grid-template-columns:minmax(0,1fr)}}
-.tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;text-align:left;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;min-height:124px;box-shadow:0 1px 0 var(--line)}
-.tile:hover{border-color:var(--accent-line)}
-.tile:active{transform:translateY(1px)}
-.ticon{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:12px;background:var(--bar);color:var(--accent);flex:0 0 auto}
-.tile b{font-size:17px}
-.tico{color:var(--muted);display:inline-flex}
-.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
-.ph{position:relative;aspect-ratio:1;max-width:100%;border-radius:10px;overflow:hidden;background:var(--well)}
+.tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:16px;text-align:left;padding:16px;border:0;border-radius:var(--r);cursor:pointer;min-height:132px;color:var(--ink)}
+.tile .ticon{background:var(--card)}
+.tile b{font-size:16px;font-weight:800}
+
+/* Photos */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.ph{position:relative;aspect-ratio:1;max-width:100%;border-radius:16px;overflow:hidden;background:var(--well);border:0;padding:0;cursor:pointer;display:block}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
-.ph .pname{position:absolute;left:0;right:0;bottom:0;padding:3px 5px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--mono);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ph button{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:15px;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:16px;line-height:1}
-.warn{border:1.5px solid var(--accent-line);background:color-mix(in srgb, var(--accent) 10%, var(--card))}
-.confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-radius:12px;background:var(--well)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
-.stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.15);padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px))}
-.sheet-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.ph .pname{position:absolute;left:6px;right:6px;bottom:6px;padding:3px 7px;background:rgba(0,0,0,.55);color:#fff;font-family:var(--mono);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:999px}
+.ph button{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:16px;line-height:1}
+
+.warn{background:color-mix(in srgb, var(--hi) 16%, var(--card));box-shadow:var(--shadow-sm)}
+.confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--well)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;z-index:9;max-width:calc(100% - 32px);box-shadow:var(--shadow);text-align:center}
+.stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top, var(--bg) 70%, transparent)}
+
+/* Bottom tab bar with centre + */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:0 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.tabs-in{max-width:520px;margin:0 auto;height:68px;background:var(--card);border-radius:26px;box-shadow:0 8px 30px rgba(22,24,29,.12);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center}
+.tabs button{border:0;background:transparent;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:600;cursor:pointer}
+.tabs button[aria-current="page"]{color:var(--ink)}
+.tabs button[aria-current="page"] svg{color:var(--hi)}
+.tabs .plus{width:58px;height:58px;border-radius:50%;background:var(--accent);color:var(--accent-ink);margin:-26px auto 0;box-shadow:0 8px 20px rgba(22,24,29,.25);font-size:0}
+.tabs .plus svg{color:var(--accent-ink)!important}
+
+/* Bottom sheet (share, new bridge) */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-radius:26px 26px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.18);padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:var(--line);margin:0 auto 12px}
+.sheet-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -133,6 +208,13 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--link);o
 <main id="view" aria-live="polite">
   <div class="card"><b>Opening your inspections…</b><span class="sub">Everything is stored on this device.</span></div>
 </main>
+<nav class="tabs" id="tabs" hidden aria-label="Main"><div class="tabs-in">
+  <button data-act="tab" data-v="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</button>
+  <button data-act="tab" data-v="inspections"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Inspections</button>
+  <button class="plus" data-act="plus" aria-label="Set up a new bridge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button data-act="tab" data-v="photos"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 8"/></svg>Photos</button>
+  <button data-act="tab" data-v="data"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>Data</button>
+</div></nav>
 <div class="sheet" id="sheet" hidden></div>
 <input type="file" id="photo-in" accept="image/*" capture="environment" class="sr" aria-label="Take a photo">
 <input type="file" id="photo-lib" accept="image/*" multiple class="sr" aria-label="Choose photos">
@@ -294,7 +376,7 @@ function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); }
 const svgI = d => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-const ICON = { mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
+const ICON = { sync: svgI('<path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>'), search: svgI('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'), cal: svgI('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), play: svgI('<path d="M8 5l11 7-11 7z"/>'), doc: svgI('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>'), mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
 const typeIcon = (t, w = 64, h = 40) => `<svg width="${w}" height="${h}" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t]}</svg>`;
 const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
 const isAndroid = () => /Android/i.test(navigator.userAgent);
@@ -607,7 +689,14 @@ function setBar(title, backLabel) { $('#title').textContent = title; $('#back').
 function render() {
   const r = S.route, v = $('#view');
   try {
+    const tabbed = ['home', 'inspections', 'photos', 'data'].includes(r.name);
+    document.body.classList.toggle('home', r.name === 'home');
+    document.body.classList.toggle('has-tabs', tabbed);
+    $('#tabs').hidden = !tabbed;
+    document.querySelectorAll('#tabs [data-act="tab"]').forEach(t => { if (t.dataset.v === r.name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
     if (r.name === 'home') v.innerHTML = viewHome();
+    else if (r.name === 'inspections') v.innerHTML = viewInspections();
+    else if (r.name === 'photos') v.innerHTML = viewPhotos();
     else if (r.name === 'data') v.innerHTML = viewData();
     else if (r.name === 'add') v.innerHTML = viewAdd();
     else if (r.name === 'bridge') v.innerHTML = viewBridge(r.id);
@@ -623,48 +712,129 @@ function render() {
 }
 const gone = () => { setBar('Not found', 'Back'); return '<div class="card"><b>This record no longer exists.</b><button class="btn out" data-act="home">Back to start</button></div>'; };
 
-/* ---------- Landing ---------- */
+/* ---------- Home ---------- */
+const DAY = 864e5;
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const touched = i => [i.startedAt, i.completedAt, i.updatedAt].filter(Boolean).map(x => new Date(x));
+function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+function initials(n) { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() : '?'; }
+const tIcon = (t, size = 'md') => `<span class="ticon t-${t}"${size === 'sm' ? ' style="width:40px;height:40px"' : ''}>${typeIcon(t, size === 'sm' ? 26 : 32, size === 'sm' ? 16 : 20)}</span>`;
+const typeShort = b => TEMPLATES[typeOf(b)].name.replace(' bridge', '');
+const bridgeTitle = b => [b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(' · ') || `${typeShort(b)} ${b.bridgeNo}`;
+
 function viewHome() {
   setBar('Bridge Site Inspection');
-  const install = isStandalone() ? '' : `<div class="card warn"><b>Install on this phone to use it with no signal</b>
-    <span>${isIOS() ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>. Open the app from the new icon from then on.' : installEvt ? 'Tap <b>Install app</b>. Open the app from the new icon from then on.' : 'In Chrome, tap the menu <b>⋮</b>, then <b>Install app</b> (or <b>Add to Home screen</b>). Open the app from the new icon from then on.'}</span>
-    ${installEvt ? '<button class="btn" data-act="install">Install app</button>' : ''}
-    <span class="sub">Once installed it opens and saves with no signal. Inspections and photos are stored on this phone until you export them.</span></div>`;
+  const name = lsGet('bsi-inspector', '');
+  const install = isStandalone() ? '' : `<div class="card warn"><b>Install on this phone to work with no signal</b>
+    <span class="sub" style="color:var(--ink)">${isIOS() ? 'In Safari tap <b>Share</b> → <b>Add to Home Screen</b>, then open the app from its icon.' : installEvt ? 'Tap <b>Install app</b>, then open the app from its icon.' : 'In Chrome tap <b>⋮</b> → <b>Install app</b>, then open the app from its icon.'}</span>
+    ${installEvt ? '<button class="btn yellow sm" data-act="install">Install app</button>' : ''}</div>`;
+
+  // Week strip (Sun–Sat), selected day defaults to today; a dot marks days with inspection activity.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const sel = S.day ? new Date(S.day) : today;
+  const start = new Date(sel); start.setDate(sel.getDate() - sel.getDay());
+  const insps = Store.all('inspections');
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start.getTime() + i * DAY); return { d, has: insps.some(x => touched(x).some(t => sameDay(t, d))) }; });
+  const dayList = insps.filter(x => touched(x).some(t => sameDay(t, sel))).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+
+  // In-progress inspections as pastel cards.
+  const active = insps.filter(i => i.status !== 'complete' && Store.get('bridges', i.bridgeId)).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+
   return `
+  <div class="hello">
+    <div class="avatar" aria-hidden="true">${esc(initials(name))}</div>
+    <div class="grow"><span class="sub">${greeting()}${name ? ',' : ''}</span><div style="font-size:18px;font-weight:800">${esc(name || 'Inspector')}</div></div>
+    <button class="icb" data-act="sync-now" aria-label="Sync now">${ICON.sync}${Store.dirty ? '<span class="badge-dot"></span>' : ''}</button>
+  </div>
   ${install}
-  <div class="row between" style="align-items:flex-start"><div class="sec grow"><h2 class="hero">Bridge site inspection</h2>
-    <span class="sub">Your bridges are below. To add another, set up a new bridge at the bottom.</span></div>
-    <button class="btn ghost sm" data-act="data" aria-label="Data and backup">${ICON.db} Data</button></div>
-  <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">Stored on this device</span></div>
-    <label class="f"><span class="sr">Search bridges</span><input class="in" id="q" type="search" placeholder="Bridge No., road, SLK or region" value="${esc(S.q)}" data-in="q" autocomplete="off"></label>
+  <label class="search"><span class="sr">Search bridges</span><input id="q" type="search" placeholder="Search bridge No., road or SLK" value="${esc(S.q)}" data-in="q" autocomplete="off">${ICON.search}</label>
+
+  <div class="week" role="group" aria-label="This week">
+    ${days.map(({ d, has }) => `<button class="day ${has ? 'has' : ''}" aria-pressed="${sameDay(d, sel)}" data-act="day" data-v="${d.toISOString()}" aria-label="${d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}${has ? ', has inspections' : ''}">${d.toLocaleDateString('en-AU', { weekday: 'short' })}<b>${d.getDate()}</b></button>`).join('')}
+  </div>
+  ${dayList.length ? `<div class="sec"><div class="sec-h"><h3>${sameDay(sel, today) ? 'Today' : sel.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })}</h3></div>
+    ${dayList.slice(0, 3).map(i => inspRow(i)).join('')}</div>` : ''}
+
+  ${active.length ? `<div class="sec"><div class="sec-h"><h3>In progress</h3><button class="more" data-act="tab" data-v="inspections">See all</button></div>
+    <div class="hscroll">${active.map(i => { const b = Store.get('bridges', i.bridgeId), t = tally(i, b), pct = Math.round(t.done / t.total * 100);
+      return `<button class="icard t-${typeOf(b)}" data-act="open-insp" data-id="${esc(i.id)}">
+        <span class="top">${tIcon(typeOf(b), 'sm')}<span class="ring">${t.done}/${t.total}</span></span>
+        <span><b>${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${esc(bridgeTitle(b))}</span></span>
+        <span class="bar2" aria-label="${pct}% inspected"><i style="width:${pct}%"></i></span>
+        <span class="sub">${t.def} with defects · ${t.photos} photo${t.photos === 1 ? '' : 's'}</span></button>`; }).join('')}</div></div>` : ''}
+
+  <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">${Store.all('bridges').length} on this device</span></div>
     <div class="chips" role="group" aria-label="Filter by type">
-      ${[['all', 'All'], ...Object.entries(TEMPLATES).map(([k, t]) => [k, t.name.replace(' bridge', '')])].map(([k, l]) => `<button class="chip" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}">${esc(l)}</button>`).join('')}</div>
+      <button class="cat" aria-pressed="${S.ft === 'all'}" data-act="ft" data-v="all" style="padding-left:18px">All</button>
+      ${Object.keys(TEMPLATES).map(k => `<button class="cat" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}"><span class="ci t-${k}">${typeIcon(k, 24, 15)}</span>${esc(TEMPLATES[k].name.replace(' bridge', ''))}</button>`).join('')}</div>
     <div id="blist" class="sec">${bridgeList()}</div></div>
-  <div class="sec" id="new-bridge" style="padding-top:8px;border-top:1px solid var(--line)"><div class="sec-h"><h3>Set up a new bridge</h3></div>
-    <div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
-      <button class="tile" data-act="new" data-type="${k}" aria-label="Set up a new ${esc(t.name.toLowerCase())}"><span class="ticon">${typeIcon(k, 44, 28)}</span><b>${esc(t.name)}</b></button>`).join('')}</div></div>`;
+
+  <div class="sec" id="new-bridge"><div class="sec-h"><h3>Set up a new bridge</h3></div>${typeTiles()}</div>`;
+}
+function typeTiles() {
+  return `<div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
+    <button class="tile t-${k}" data-act="new" data-type="${k}" aria-label="Set up a new ${esc(t.name.toLowerCase())}">${tIcon(k)}<b>${esc(t.name)}</b></button>`).join('')}</div>`;
+}
+function inspRow(i) {
+  const b = Store.get('bridges', i.bridgeId); if (!b) return '';
+  const t = tally(i, b), done = i.status === 'complete';
+  return `<button class="brow" data-act="${done ? 'open-review' : 'open-insp'}" data-id="${esc(i.id)}">
+    ${tIcon(typeOf(b))}
+    <span class="grow"><b style="font-size:16px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${esc(LEVELS[i.level])} · ${done ? 'complete' : `${t.done}/${t.total} inspected`}</span>
+      <br><span class="when">${ICON.cal} ${fmtDate(i.completedAt || i.startedAt)} · ${t.def} defect${t.def === 1 ? '' : 's'} · ${t.photos} photo${t.photos === 1 ? '' : 's'}</span></span>
+    <span class="icb ${done ? 'soft' : 'yellow'}" aria-hidden="true">${done ? ICON.doc : ICON.play}</span></button>`;
 }
 function bridgeList() {
   const t = S.q.trim().toLowerCase();
   const rows = Store.all('bridges').filter(b => (S.ft === 'all' || typeOf(b) === S.ft) && (!t || [b.bridgeNo, b.road, b.slk, b.region].some(x => String(x || '').toLowerCase().includes(t))))
     .sort((a, b) => String(a.bridgeNo).localeCompare(String(b.bridgeNo), 'en', { numeric: true }));
   if (!rows.length) return t || S.ft !== 'all' ? '<span class="sub">No bridge matches this search.</span>'
-    : '<div class="card"><b>No bridges yet</b><span class="sub">Pick a type under <b>Set up a new bridge</b> below, or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
+    : '<div class="card"><b>No bridges yet</b><span class="sub">Tap <b>+</b> below or pick a type under <b>Set up a new bridge</b>. Or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
   return rows.map(b => {
     const list = inspectionsFor(b.id), active = list.find(i => i.status !== 'complete'), last = list.find(i => i.status === 'complete');
     const tl = active ? tally(active, b) : null;
-    const pill = active ? `<span class="pill hot">${LEVELS[active.level].split(' ·')[0]} · ${tl.done}/${tl.total} done</span>` : last ? `<span class="pill">Inspected ${fmtDate(last.completedAt)}</span>` : '<span class="pill">Not inspected</span>';
-    return `<button class="card tap ${active ? 'hot' : ''}" style="flex-direction:column;align-items:stretch;gap:8px" data-act="open-bridge" data-id="${esc(b.id)}">
-      <span class="row between"><span class="row" style="gap:8px"><span class="tico">${typeIcon(typeOf(b), 32, 20)}</span><span class="mono" style="font-weight:600">${esc(TEMPLATES[typeOf(b)].name.replace(' bridge', ''))} ${esc(b.bridgeNo)}</span></span>${pill}</span>
-      <span style="font-size:18px;font-weight:600">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(' · ') || '—')}</span>
-      <span class="sub">${esc(factsOf(b).slice(1, 3).map(f => f[1]).join(' · '))} · ${b.components.length} components${b.sample ? ' · sample' : ''}</span>
-    </button>`;
+    const when = active ? `${LEVELS[active.level].split(' ·')[0]} in progress · ${tl.done}/${tl.total}` : last ? `Inspected ${fmtDate(last.completedAt)}` : 'Not inspected yet';
+    return `<button class="brow" data-act="open-bridge" data-id="${esc(b.id)}">
+      ${tIcon(typeOf(b))}
+      <span class="grow"><b style="font-size:16px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${esc(bridgeTitle(b))}${b.sample ? ' · sample' : ''}</span>
+        <br><span class="when" ${active ? 'style="background:var(--hi);color:var(--hi-ink);font-weight:700"' : ''}>${ICON.cal} ${esc(when)}</span></span>
+      <span class="icb ${active ? 'yellow' : 'soft'}" aria-hidden="true">${ICON.chev}</span></button>`;
   }).join('');
+}
+
+/* ---------- Inspections tab ---------- */
+function viewInspections() {
+  setBar('');
+  const all = Store.all('inspections').filter(i => Store.get('bridges', i.bridgeId)).sort((a, b) => (b.updatedAt || b.startedAt || '').localeCompare(a.updatedAt || a.startedAt || ''));
+  const act = all.filter(i => i.status !== 'complete'), done = all.filter(i => i.status === 'complete');
+  return `<h2 class="big">Inspections</h2>
+  <div class="sec"><div class="sec-h"><h3>In progress</h3><span class="sub">${act.length}</span></div>${act.map(inspRow).join('') || '<span class="sub">None in progress. Open a bridge and tap Start inspection.</span>'}</div>
+  <div class="sec"><div class="sec-h"><h3>Completed</h3><span class="sub">${done.length}</span></div>${done.map(inspRow).join('') || '<span class="sub">No completed inspections yet.</span>'}</div>`;
+}
+
+/* ---------- Photos tab ---------- */
+function viewPhotos() {
+  setBar('');
+  const groups = Store.all('inspections').filter(i => Store.get('bridges', i.bridgeId) && photosOf(i).length)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  if (!groups.length) return '<h2 class="big">Photos</h2><div class="card"><b>No photos yet</b><span class="sub">Photos you take during inspections appear here, named by component.</span></div>';
+  return '<h2 class="big">Photos</h2>' + groups.map(i => {
+    const b = Store.get('bridges', i.bridgeId), names = photoNames(i, b), ps = orderedPhotos(i, b);
+    return `<div class="sec"><div class="sec-h"><h3>${esc(typeShort(b))} ${esc(b.bridgeNo)}</h3><span class="sub">${fmtDate(i.startedAt)} · ${ps.length}</span></div>
+      <div class="photos">${ps.map(p => `<button class="ph" data-act="photo-open" data-insp="${esc(i.id)}" data-cid="${esc(p.componentId)}" aria-label="${esc(names[p.id])}"><img alt="" src="${esc(Store.photoSrc(p.id))}" data-pid="${esc(p.id)}"><span class="pname">${esc(names[p.id])}.jpg</span></button>`).join('')}</div></div>`;
+  }).join('');
+}
+
+/* ---------- New bridge picker (from the + button) ---------- */
+function openNewSheet() {
+  const sh = $('#sheet');
+  sh.innerHTML = `<div class="sheet-in"><div class="row between"><b style="font-size:18px">Set up a new bridge</b><button class="icb soft" data-act="sheet-close" aria-label="Close">×</button></div>${typeTiles()}</div>`;
+  sh.hidden = false;
 }
 
 /* ---------- Data, backup, restore ---------- */
 function viewData() {
-  setBar('Data & backup', 'Start');
+  setBar('');
   const nb = Store.all('bridges').length, ni = Store.all('inspections').length, np = Store.all('inspections').reduce((a, i) => a + photosOf(i).length, 0);
   const gps = lsGet('bsi-gps', true);
   setTimeout(async () => { try { const e = await navigator.storage?.estimate?.(); const el = $('#usage'); if (e && el) el.textContent = `${fmtSize(e.usage || 0)} used${e.quota ? ' of about ' + fmtSize(e.quota) + ' available' : ''}`; } catch {} }, 0);
@@ -714,7 +884,7 @@ function viewAdd() {
     <button data-act="step" data-k="${k}" data-d="1" data-min="${min}" data-max="${max}" aria-label="Increase ${label}">+</button></div>`;
   const locSeq = locs.length > 9 ? [...locs.slice(0, 4), '…', ...locs.slice(-3)] : locs;
   return `
-  <div class="row" style="gap:12px"><span class="ticon">${typeIcon(f.type, 44, 28)}</span><h2 class="big">${esc(T.name)}</h2></div>
+  <div class="row" style="gap:12px">${tIcon(f.type)}<h2 class="big">${esc(T.name)}</h2></div>
   <div class="sec"><div class="sec-h"><h3>Identification</h3></div>
     <label class="f"><span>Bridge / structure No.</span><input class="in" id="f-bridgeNo" data-in="form" data-k="bridgeNo" value="${esc(f.bridgeNo)}" placeholder="e.g. 0412" autocapitalize="characters"></label>
     <div class="row wrap" style="align-items:flex-start">
@@ -743,7 +913,7 @@ function viewBridge(id) {
       <div class="seg" role="group" aria-label="Inspection level">${[2, 1].map(n => `<button aria-pressed="${S.level === n}" data-act="lvl" data-v="${n}">${LEVELS[n]}</button>`).join('')}</div>
       <button class="btn block" data-act="start">Start inspection</button></div>`;
   return `
-  <div class="row" style="gap:12px;align-items:flex-start"><span class="ticon">${typeIcon(typeOf(b), 44, 28)}</span>
+  <div class="row" style="gap:12px;align-items:flex-start">${tIcon(typeOf(b))}
     <div class="grow"><span class="mono sub" style="font-weight:600">${esc(T.name)} ${esc(b.bridgeNo)}${b.region ? ' · ' + esc(b.region) : ''}</span>
     <h2 class="big">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(', ') || 'Structure')}</h2></div></div>
   <div class="facts">${factsOf(b).map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v)}</b></div>`).join('')}<div><span class="sub">Components</span><b>${b.components.length}</b></div></div>
@@ -875,8 +1045,12 @@ function viewReview(id) {
 let photoTarget = null;
 const A = {
   back, home() { S.stack = []; S.route = { name: 'home' }; render(); },
-  data() { nav({ name: 'data' }); },
-  new(d) { S.form = newForm(d.type); nav({ name: 'add' }); },
+  data() { A.tab({ v: 'data' }); },
+  tab(d) { closeSheet(); S.stack = []; S.route = { name: d.v }; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0); },
+  day(d) { S.day = d.v; render(); },
+  plus() { openNewSheet(); },
+  'photo-open'(d) { nav({ name: 'component', id: d.insp, cid: d.cid }); },
+  new(d) { closeSheet(); S.form = newForm(d.type); nav({ name: 'add' }); },
   ft(d) { S.ft = d.v; render(); },
   async sample() {
     const layout = { spans: 3, stringersPerSpan: 5, pilesPerPier: 4, abutPiles: 4, abutType: 'sheeting', corbels: 'yes' };
