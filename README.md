@@ -4,7 +4,7 @@ Works on iPhone, Android, tablets and laptops. After it is installed on the home
 opens and saves **with no signal**. Bridges, inspections and photos are always saved on the
 phone first. With signal they also sync to a **Google Sheet and Google Drive folder**, and
 corrections made on another device (e.g. the office laptop) come back to the phone.
-Photos are stored at the best quality that fits in **2 MB**.
+Photos are kept on the phone at their **original size**. The copy uploaded to Google Drive is shrunk to **5 MB max**, and pictures inside the Word report to 2 MB max.
 
 ## What is in this folder
 

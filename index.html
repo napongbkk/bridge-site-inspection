@@ -103,6 +103,9 @@ h2.hero{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height
 .chip{min-height:42px;padding:0 16px;border-radius:999px;border:0;background:var(--card);box-shadow:var(--shadow-sm);font-size:14px;cursor:pointer;white-space:nowrap;flex:0 0 auto;color:var(--ink)}
 .chips.loc .chip{min-height:38px;padding:0 13px;font-size:13.5px}
 .chip[aria-pressed="true"]{background:var(--hi);color:var(--hi-ink);font-weight:700}
+.chips.loc .chip.alldone{background:var(--ok);color:var(--ok-ink);font-weight:700}
+.chips.loc .chip.alldone[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ok-ink)}
+.chips.loc .chip svg{width:14px;height:14px;vertical-align:-2px}
 .chip.okc[aria-pressed="true"]{background:var(--ok);color:var(--ok-ink)}
 .chip.nac[aria-pressed="true"]{background:var(--well);color:var(--ink)}
 .cat{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:6px 18px 6px 6px;border-radius:999px;border:0;background:var(--card);box-shadow:var(--shadow-sm);cursor:pointer;font-size:15px;font-weight:600;color:var(--ink)}
@@ -112,7 +115,9 @@ h2.hero{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height
 /* Badges and pills */
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
 .b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well);color:var(--muted)} .b-note{background:var(--well)}
-.b-todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--link);color:var(--link)}
+.b-todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--danger);color:var(--danger)}
+.tap .badge.b-ok,.tap .badge.b-def,.tap .badge.b-na,.tap .badge.b-note{background:var(--ok);color:var(--ok-ink)}
+.st-todo{color:var(--danger);font-weight:700} .st-done{color:var(--ok-ink);font-weight:700}
 .pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--well);white-space:nowrap}
 .pill.hot{background:var(--hi);color:var(--hi-ink)}
 
@@ -209,6 +214,8 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .ph button{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:16px;line-height:1}
 
 .warn{background:color-mix(in srgb, var(--hi) 16%, var(--card));box-shadow:var(--shadow-sm)}
+.fin{border:2px solid var(--ink)} .tick{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--well);cursor:pointer;font-size:15px}
+.tick input{width:24px;height:24px;flex:0 0 auto;margin:0;accent-color:var(--ok-ink)}
 .confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--well)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;z-index:9;max-width:calc(100% - 32px);box-shadow:var(--shadow);text-align:center}
 .stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top, var(--bg) 70%, transparent)}
@@ -585,7 +592,7 @@ const Sync = {
         const id = k.slice(6), inspId = await IDB.get('outbox', k), r = await IDB.get('photos', id);
         if (!r) { await IDB.del('outbox', k); continue; }
         const insp = Store.get('inspections', inspId), b = insp && Store.get('bridges', insp.bridgeId), names = insp && b ? photoNames(insp, b) : {};
-        await this.post({ op: 'photo', id, inspection_id: inspId || '', file_name: (names[id] || id) + '.jpg', folder: insp && b ? pkgName(insp, b) : 'Unsorted', b64: await blobToB64(r.blob) });
+        await this.post({ op: 'photo', id, inspection_id: inspId || '', file_name: (names[id] || id) + '.jpg', folder: insp && b ? pkgName(insp, b) : 'Unsorted', b64: await blobToB64(await fitPhoto(r.blob, UPLOAD_MAX_BYTES)) });
         await IDB.del('outbox', k);
       }
       for (const k of keys.filter(k => k.startsWith('photodel/'))) { await this.post({ op: 'photoDel', id: k.slice(9) }); await IDB.del('outbox', k); }
@@ -780,9 +787,7 @@ function viewHome() {
     <div class="chips" role="group" aria-label="Filter by type">
       <button class="cat" aria-pressed="${S.ft === 'all'}" data-act="ft" data-v="all" style="padding-left:18px">All</button>
       ${Object.keys(TEMPLATES).map(k => `<button class="cat" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}"><span class="ci t-${k}">${typeIcon(k, 24, 15)}</span>${esc(TEMPLATES[k].name.replace(' bridge', ''))}</button>`).join('')}</div>
-    <div id="blist" class="sec">${bridgeList()}</div></div>
-
-  <div class="sec" id="new-bridge"><div class="sec-h"><h3>Set up a new bridge</h3></div>${typeTiles()}</div>`;
+    <div id="blist" class="sec">${bridgeList()}</div></div>`;
 }
 function syncBoxHtml() {
   const on = navigator.onLine, n = Store.dirty || 0, url = Sync.url;
@@ -807,7 +812,7 @@ function inspRow(i) {
   const t = tally(i, b), done = i.status === 'complete';
   return `<button class="brow" data-act="${done ? 'open-review' : 'open-insp'}" data-id="${esc(i.id)}">
     ${tIcon(typeOf(b))}
-    <span class="grow"><b style="font-size:16px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${esc(LEVELS[i.level])} · ${done ? 'complete' : `${t.done}/${t.total} inspected`}</span>
+    <span class="grow"><b style="font-size:16px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${esc(LEVELS[i.level])} · ${done ? '<span class="st-done">Completed</span>' : `<span class="st-todo">${t.done}/${t.total} inspected</span>`}</span>
       <br><span class="when">${ICON.cal} ${fmtDate(i.completedAt || i.startedAt)} · ${t.def} defect${t.def === 1 ? '' : 's'} · ${t.photos} photo${t.photos === 1 ? '' : 's'}</span></span>
     <span class="icb ${done ? 'soft' : 'yellow'}" aria-hidden="true">${done ? ICON.doc : ICON.play}</span></button>`;
 }
@@ -816,7 +821,7 @@ function bridgeList() {
   const rows = Store.all('bridges').filter(b => (S.ft === 'all' || typeOf(b) === S.ft) && (!t || [b.bridgeNo, b.project, b.road, b.slk, b.region].some(x => String(x || '').toLowerCase().includes(t))))
     .sort((a, b) => String(a.bridgeNo).localeCompare(String(b.bridgeNo), 'en', { numeric: true }));
   if (!rows.length) return t || S.ft !== 'all' ? '<span class="sub">No bridge matches this search.</span>'
-    : '<div class="card"><b>No bridges yet</b><span class="sub">Tap <b>+</b> below or pick a type under <b>Set up a new bridge</b>. Or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
+    : '<div class="card"><b>No bridges yet</b><span class="sub">Tap <b>+</b> at the bottom to set up a bridge. Or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
   return rows.map(b => {
     const list = inspectionsFor(b.id), active = list.find(i => i.status !== 'complete'), last = list.find(i => i.status === 'complete');
     const tl = active ? tally(active, b) : null;
@@ -1045,7 +1050,7 @@ function viewChecklist(id) {
     <div class="prog" role="img" aria-label="${t.done} of ${t.total} inspected, ${t.def} with defects"><i style="width:${t.def / t.total * 100}%;background:var(--def)"></i><i style="width:${(t.done - t.def) / t.total * 100}%;background:var(--ink)"></i></div></div>
   <div class="chips loc" role="tablist" aria-label="Location">
     ${locs.map(l => { const left = comps.filter(c => c.loc === l && !st(c).done).length;
-      return `<button class="chip" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${locLabel(l)}${left ? ' · ' + left : ' ✓'}</button>`; }).join('')}
+      return `<button class="chip${left ? '' : ' alldone'}" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${left ? '' : ICON.check + ' '}${locLabel(l)}</button>`; }).join('')}
   </div>
   <div class="sec">${comps.filter(c => c.loc === S.loc).map(c => {
     const it = I[c.id] || {}, s = st(c), sub = [(it.defects || []).slice(0, 3).join(', '), pc[c.id] ? `${pc[c.id]} photo${pc[c.id] > 1 ? 's' : ''}` : '', it.comment ? '“' + it.comment.slice(0, 40) + (it.comment.length > 40 ? '…' : '') + '”' : ''].filter(Boolean).join(' · ') || c.ph + '.jpg';
@@ -1126,7 +1131,11 @@ function viewReview(id) {
     <label class="f"><span class="sr">Inspection summary</span><textarea class="in" id="summary" data-in="review" autocapitalize="sentences" spellcheck="true" placeholder="Overall condition, key findings, access issues" ${dis}>${esc(insp.summary || '')}</textarea></label>
     <label class="f"><span>Inspector</span><input class="in" id="inspector2" data-in="review" value="${esc(insp.inspector || '')}" placeholder="Name" ${dis}></label>
     ${done ? `<span class="sub">Completed ${insp.completedAt ? new Date(insp.completedAt).toLocaleString('en-AU') : ''}</span>` : ''}</div>
-  ${done ? '' : S.confirm === 'finish' ? `<div class="confirm"><span class="grow">Complete and lock this inspection, then export the Word report and pictures?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm" data-act="finish" data-id="${esc(id)}">Complete &amp; export</button></div>`
+  ${done ? '' : S.confirm === 'finish' ? `<div class="card fin" role="group" aria-labelledby="fin-h"><b id="fin-h" style="font-size:17px">Confirm before finishing</b>
+      <span class="sub" style="color:var(--ink)">${t.done} of ${t.total} components inspected · ${t.def} with defects · ${t.photos} photos${todo ? ` · <b style="color:var(--danger)">${todo} not inspected</b>` : ''}</span>
+      <span class="sub">The inspection will be locked (no more changes) and the Word report and pictures exported.</span>
+      <label class="tick"><input type="checkbox" id="finish-ok"><span>I have checked the findings and photos, and this inspection is complete.</span></label>
+      <div class="row"><button class="btn ghost grow" data-act="cancel">Go back</button><button class="btn grow" id="finish-btn" data-act="finish" data-id="${esc(id)}" disabled>Finish</button></div></div>`
     : `<button class="btn block" data-act="ask" data-what="finish">Complete inspection</button>`}
   <div class="sec"><div class="sec-h"><h3>Export</h3></div>
     <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
@@ -1226,6 +1235,7 @@ const A = {
   ask(d) { S.confirm = d.what; render(); },
   cancel() { S.confirm = null; render(); },
   async finish(d) {
+    if (!$('#finish-ok')?.checked) return;
     const name = $('#inspector2').value.trim(); if (name) lsSet('bsi-inspector', name);
     await Store.patch('inspections', d.id, { inspector: name, summary: $('#summary').value.trim(), status: 'complete', completedAt: now() });
     S.confirm = null; render(); toast('Inspection completed. Preparing the export…');
@@ -1295,9 +1305,12 @@ window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { flushDraft(); flushReview(); } });
 
 /* ---------- Photos: downscale, store on device, tag GPS ---------- */
-/* Photos are kept as large and sharp as possible but never over 2 MB:
-   full resolution (up to 4032 px) at high quality first, then lower quality, then smaller size. */
-const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+/* The phone keeps every photo at its original size. Copies are shrunk only where size matters:
+   the Google Drive upload (5 MB max) and the pictures inside the Word report (2 MB max).
+   Shrinking tries full resolution at high quality first, then lower quality, then smaller size. */
+const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;   // Google Drive copy
+const WORD_MAX_BYTES = 2 * 1024 * 1024;     // picture inside the Word report
+const CANVAS_MAX_PX = 16e6;                 // iPhone Safari cannot draw a larger canvas
 function loadImage(file) {
   return new Promise((res, rej) => {
     const url = URL.createObjectURL(file), img = new Image();
@@ -1306,19 +1319,27 @@ function loadImage(file) {
     img.src = url;
   });
 }
-async function fitPhoto(file) {
+// Re-encode as JPEG no bigger than maxBytes. Returns the input untouched when it already fits.
+async function fitPhoto(file, maxBytes = UPLOAD_MAX_BYTES) {
+  if (file.size <= maxBytes && file.type === 'image/jpeg') return file;
   const img = await loadImage(file), W = img.naturalWidth, H = img.naturalHeight;
-  let dim = Math.min(4032, Math.max(W, H)), q = 0.9, blob = null;
+  let dim = Math.round(Math.max(W, H) * Math.min(1, Math.sqrt(CANVAS_MAX_PX / (W * H)))), q = 0.92, blob = null;
   for (let i = 0; i < 12; i++) {
     const k = dim / Math.max(W, H), c = document.createElement('canvas');
     c.width = Math.round(W * k); c.height = Math.round(H * k);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
     blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q));
     if (!blob) throw new Error('Could not read photo');
-    if (blob.size <= PHOTO_MAX_BYTES) return blob;
+    if (blob.size <= maxBytes) return blob;
     if (q > 0.72) q = Math.round((q - 0.06) * 100) / 100; else dim = Math.round(dim * 0.85);
   }
   return blob;
+}
+// The phone keeps the photo at its original size. Only a photo the browser cannot show as a
+// JPEG (e.g. PNG, HEIC on some Androids) is converted, at full resolution.
+async function originalPhoto(file) {
+  if (file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name || '')) { await loadImage(file); return file.type === 'image/jpeg' ? file : new Blob([file], { type: 'image/jpeg' }); }
+  return fitPhoto(file, Infinity);
 }
 async function onPhotos(files) {
   if (!files || !files.length || !photoTarget) return;
@@ -1327,7 +1348,7 @@ async function onPhotos(files) {
   for (const f of files) {
     try {
       Store.pending++; Store.status();
-      const blob = await fitPhoto(f), id = await Store.savePhoto(blob, inspId);
+      const blob = await originalPhoto(f), id = await Store.savePhoto(blob, inspId);
       const t = now();
       await Store.patch('inspections', inspId, { photos: { [id]: { componentId: tgt.cid, takenAt: t, updatedAt: t } } });
       added.push(id);
@@ -1339,6 +1360,7 @@ async function onPhotos(files) {
   render(); if (added.length > 1) toast(`${added.length} photos added.`);
   if (added.length && lsGet('bsi-gps', true)) getFix(8000).then(fix => { if (fix) Store.patch('inspections', inspId, { photos: Object.fromEntries(added.map(id => [id, { lat: fix.lat, lng: fix.lng, acc: fix.acc }])) }); });
 }
+document.addEventListener('change', e => { if (e.target.id === 'finish-ok') $('#finish-btn').disabled = !e.target.checked; });
 $('#photo-in').addEventListener('change', e => onPhotos(e.target.files));
 $('#photo-lib').addEventListener('change', e => onPhotos(e.target.files));
 
@@ -1499,7 +1521,7 @@ async function buildDocx(id, collected) {
   z.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${rels.join('')}</Relationships>`);
   z.file('word/styles.xml', DOCX_STYLES);
   z.file('word/document.xml', doc);
-  pics.forEach((x, i) => z.file(`word/media/picture${i + 1}.jpeg`, x.blob));
+  for (let i = 0; i < pics.length; i++) z.file(`word/media/picture${i + 1}.jpeg`, await fitPhoto(pics[i].blob, WORD_MAX_BYTES));
   return { name: `${pkgName(insp, b)}${insp.status === 'complete' ? '' : '-draft'}.docx`, blob: await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' }) };
 }
 async function makeDocx(id) {
