@@ -214,8 +214,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .ph button{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:16px;line-height:1}
 
 .warn{background:color-mix(in srgb, var(--hi) 16%, var(--card));box-shadow:var(--shadow-sm)}
-.fin{border:2px solid var(--ink)} .tick{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--well);cursor:pointer;font-size:15px}
-.tick input{width:24px;height:24px;flex:0 0 auto;margin:0;accent-color:var(--ok-ink)}
+.fin{border:2px solid var(--ink)}
 .confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--well)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;z-index:9;max-width:calc(100% - 32px);box-shadow:var(--shadow);text-align:center}
 .stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top, var(--bg) 70%, transparent)}
@@ -1074,7 +1073,7 @@ function touchDraft() { clearTimeout(draftT); draftT = setTimeout(flushDraft, 40
 function flushDraft() {
   clearTimeout(draftT);
   const d = S.draft; if (!d) return;
-  const insp = Store.get('inspections', d.inspId); if (!insp || insp.status === 'complete') return;
+  const insp = Store.get('inspections', d.inspId); if (!insp) return;
   const prev = itemsOf(insp)[d.cid], next = { ...d.it, defects: [...d.it.defects], updatedAt: now() };
   if (prev && JSON.stringify({ ...prev, updatedAt: 0 }) === JSON.stringify({ ...next, updatedAt: 0 })) return;
   if (!prev && !next.defects.length && !next.none && !next.na && !next.comment) return;
@@ -1086,7 +1085,7 @@ function photoTile(p, ro, name) {
 function viewComponent(inspId, cid) {
   const insp = Store.get('inspections', inspId); if (!insp) return gone();
   const b = Store.get('bridges', insp.bridgeId), c = b.components.find(x => x.id === cid); if (!c) return gone();
-  const ro = insp.status === 'complete', it = getDraft(inspId, cid).it, dis = ro ? 'disabled' : '';
+  const ro = false, it = getDraft(inspId, cid).it, dis = ro ? 'disabled' : '';
   const photos = photosOf(insp, cid), names = photoNames(insp, b);
   setBar(c.code, 'Components');
   return `
@@ -1111,7 +1110,7 @@ function viewReview(id) {
   const done = insp.status === 'complete', t = tally(insp, b), I = itemsOf(insp), pc = photoCounts(insp);
   setBar(done ? 'Inspection record' : 'Review & finish', done ? 'Bridge' : 'Checklist');
   const withDef = b.components.filter(c => (I[c.id]?.defects || []).length);
-  const todo = t.total - t.done, dis = done ? 'disabled' : '', names = photoNames(insp, b);
+  const todo = t.total - t.done, dis = '', names = photoNames(insp, b);
   return `
   <div><h2 class="big">${done ? 'Inspection complete' : 'Review & finish'}</h2><span class="sub">${esc(TEMPLATES[typeOf(b)].name)} ${esc(b.bridgeNo)} · ${esc(LEVELS[insp.level])} · started ${fmtDate(insp.startedAt)}${insp.inspector ? ' by ' + esc(insp.inspector) : ''}</span></div>
   ${!done && todo ? `<div class="card warn"><span>${todo} component${todo > 1 ? 's have' : ' has'} nothing recorded yet.</span>
@@ -1127,15 +1126,15 @@ function viewReview(id) {
     ${withDef.length ? withDef.map(c => `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
       <span class="grow"><b>${esc(c.name)}</b> <span class="sub">${locLabel(c.loc)}</span><br><span>${esc(I[c.id].defects.join(', '))}</span>${I[c.id].comment ? `<br><span class="sub">${esc(I[c.id].comment)}</span>` : ''}</span>
       <span class="badge b-def">${pc[c.id] || 0} photo${pc[c.id] === 1 ? '' : 's'}</span></button>`).join('') : '<span class="sub">No defects recorded.</span>'}</div>
-  <div class="sec"><div class="sec-h"><h3>Summary</h3>${done ? '' : `<button class="btn out sm" data-act="dictate" data-for="summary">${ICON.mic} Speak</button>`}</div>
+  <div class="sec"><div class="sec-h"><h3>Summary</h3>${`<button class="btn out sm" data-act="dictate" data-for="summary">${ICON.mic} Speak</button>`}</div>
     <label class="f"><span class="sr">Inspection summary</span><textarea class="in" id="summary" data-in="review" autocapitalize="sentences" spellcheck="true" placeholder="Overall condition, key findings, access issues" ${dis}>${esc(insp.summary || '')}</textarea></label>
     <label class="f"><span>Inspector</span><input class="in" id="inspector2" data-in="review" value="${esc(insp.inspector || '')}" placeholder="Name" ${dis}></label>
-    ${done ? `<span class="sub">Completed ${insp.completedAt ? new Date(insp.completedAt).toLocaleString('en-AU') : ''}</span>` : ''}</div>
+    ${done ? `<span class="sub">Completed ${insp.completedAt ? new Date(insp.completedAt).toLocaleString('en-AU') : ''}. You can still change anything; changes save and sync as usual.</span>
+    <button class="btn out block" data-act="open-insp" data-id="${esc(id)}">Edit components &amp; photos</button>` : ''}</div>
   ${done ? '' : S.confirm === 'finish' ? `<div class="card fin" role="group" aria-labelledby="fin-h"><b id="fin-h" style="font-size:17px">Confirm before finishing</b>
       <span class="sub" style="color:var(--ink)">${t.done} of ${t.total} components inspected · ${t.def} with defects · ${t.photos} photos${todo ? ` · <b style="color:var(--danger)">${todo} not inspected</b>` : ''}</span>
-      <span class="sub">The inspection will be locked (no more changes) and the Word report and pictures exported.</span>
-      <label class="tick"><input type="checkbox" id="finish-ok"><span>I have checked the findings and photos, and this inspection is complete.</span></label>
-      <div class="row"><button class="btn ghost grow" data-act="cancel">Go back</button><button class="btn grow" id="finish-btn" data-act="finish" data-id="${esc(id)}" disabled>Finish</button></div></div>`
+      <span class="sub">The inspection will be marked complete and the Word report and pictures exported. You can still make changes afterwards.</span>
+      <div class="row"><button class="btn ghost grow" data-act="cancel">Go back</button><button class="btn grow" id="finish-btn" data-act="finish" data-id="${esc(id)}">Finish</button></div></div>`
     : `<button class="btn block" data-act="ask" data-what="finish">Complete inspection</button>`}
   <div class="sec"><div class="sec-h"><h3>Export</h3></div>
     <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
@@ -1213,7 +1212,7 @@ const A = {
     const el = $('#cmt'); if (el && S.draft) S.draft.it.comment = el.value;
     flushDraft(); S.lastCid = d.cid; const inspId = S.route.id; back();
     const insp = Store.get('inspections', inspId);
-    if (insp && insp.status !== 'complete') toast(statusOf(itemsOf(insp)[d.cid], photosOf(insp, d.cid).length).done ? 'Saved.' : 'Nothing recorded for that component yet.');
+    if (insp) toast(statusOf(itemsOf(insp)[d.cid], photosOf(insp, d.cid).length).done ? 'Saved.' : 'Nothing recorded for that component yet.');
   },
   none() { const it = S.draft.it; it.none = !it.none; if (it.none) { it.defects = []; it.na = false; } touchDraft(); render(); },
   na() { const it = S.draft.it; it.na = !it.na; if (it.na) it.none = false; touchDraft(); render(); },
@@ -1235,7 +1234,6 @@ const A = {
   ask(d) { S.confirm = d.what; render(); },
   cancel() { S.confirm = null; render(); },
   async finish(d) {
-    if (!$('#finish-ok')?.checked) return;
     const name = $('#inspector2').value.trim(); if (name) lsSet('bsi-inspector', name);
     await Store.patch('inspections', d.id, { inspector: name, summary: $('#summary').value.trim(), status: 'complete', completedAt: now() });
     S.confirm = null; render(); toast('Inspection completed. Preparing the export…');
@@ -1288,7 +1286,7 @@ const A = {
 let reviewT;
 function flushReview() {
   clearTimeout(reviewT); if (S.route.name !== 'review') return;
-  const i = Store.get('inspections', S.route.id); if (!i || i.status === 'complete') return;
+  const i = Store.get('inspections', S.route.id); if (!i) return;
   const s = $('#summary')?.value ?? i.summary, n = $('#inspector2')?.value ?? i.inspector;
   if (s !== i.summary || n !== i.inspector) Store.patch('inspections', S.route.id, { summary: s, inspector: n });
 }
@@ -1360,7 +1358,6 @@ async function onPhotos(files) {
   render(); if (added.length > 1) toast(`${added.length} photos added.`);
   if (added.length && lsGet('bsi-gps', true)) getFix(8000).then(fix => { if (fix) Store.patch('inspections', inspId, { photos: Object.fromEntries(added.map(id => [id, { lat: fix.lat, lng: fix.lng, acc: fix.acc }])) }); });
 }
-document.addEventListener('change', e => { if (e.target.id === 'finish-ok') $('#finish-btn').disabled = !e.target.checked; });
 $('#photo-in').addEventListener('change', e => onPhotos(e.target.files));
 $('#photo-lib').addEventListener('change', e => onPhotos(e.target.files));
 
