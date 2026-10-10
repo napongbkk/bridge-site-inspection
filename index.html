@@ -40,7 +40,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .bar h1{flex:1;margin:0;font-size:17px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
-.save[data-s="saving"] .dot{background:#E4C65A} .save[data-s="error"] .dot{background:var(--danger)}
+.save[data-s="saving"] .dot{background:#E4C65A} .save[data-s="error"] .dot{background:var(--danger)} .save[data-s="wait"] .dot{background:var(--def)}
 main{max-width:760px;margin:0 auto;padding:16px max(16px, env(safe-area-inset-right,0px)) calc(72px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
 h2.big{margin:0;font-size:26px;font-weight:700;letter-spacing:-.4px;text-wrap:balance}
 h2.hero{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.1;text-wrap:balance}
@@ -133,6 +133,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--accent)
 <div class="toast" id="toast" hidden></div>
 
 <script src="lib/jszip.min.js"></script>
+<script src="config.js"></script>
 <script>
 'use strict';
 /* =========================================================================
@@ -281,7 +282,7 @@ const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-AU', { day: '2
 const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(1) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB';
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Blob);
 function deepMerge(t, p) { const o = isObj(t) ? { ...t } : {}; for (const k in p) o[k] = isObj(p[k]) && isObj(o[k]) ? deepMerge(o[k], p[k]) : p[k]; return o; }
-const live = m => Object.entries(m || {}).filter(([, v]) => v != null);
+const live = m => Object.entries(m || {}).filter(([, v]) => v != null && !v.deleted);
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); }
@@ -299,8 +300,8 @@ const IDB = {
   db: null,
   open() {
     return new Promise((res, rej) => {
-      const r = indexedDB.open('bridge-site-inspection', 1);
-      r.onupgradeneeded = () => { const d = r.result; ['bridges', 'inspections', 'photos'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n); }); };
+      const r = indexedDB.open('bridge-site-inspection', 2);
+      r.onupgradeneeded = () => { const d = r.result; ['bridges', 'inspections', 'photos', 'outbox', 'meta'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n); }); };
       r.onsuccess = () => { this.db = r.result; res(); };
       r.onerror = () => rej(r.error);
     });
@@ -325,12 +326,14 @@ const IDB = {
   },
 };
 const Store = {
-  pending: 0, error: null, persisted: false,
+  pending: 0, error: null, persisted: false, dirty: 0,
   cache: { bridges: {}, inspections: {} }, urls: {},
   async init() {
     await IDB.open();
-    this.cache.bridges = await IDB.all('bridges');
-    this.cache.inspections = await IDB.all('inspections');
+    const keep = m => Object.fromEntries(Object.entries(m).filter(([, v]) => v && !v._deleted));
+    this.cache.bridges = keep(await IDB.all('bridges'));
+    this.cache.inspections = keep(await IDB.all('inspections'));
+    this.dirty = (await IDB.keys('outbox')).length;
     try { this.persisted = await navigator.storage?.persisted?.() || false; if (!this.persisted) this.persisted = await navigator.storage?.persist?.() || false; } catch {}
     this.status();
   },
@@ -342,25 +345,176 @@ const Store = {
   },
   setError(m) { this.error = m; this.status(); toast(m); },
   status() {
-    const el = $('#save'), t = $('#save-t');
-    if (this.error) { el.dataset.s = 'error'; t.textContent = 'Not saved'; el.title = this.error; return; }
-    el.title = ''; el.dataset.s = this.pending ? 'saving' : 'ok';
-    t.textContent = this.pending ? 'Saving…' : 'Saved on device';
+    const el = $('#save'), t = $('#save-t'), on = navigator.onLine;
+    let s = 'ok', txt = 'Saved on device';
+    if (this.error) { s = 'error'; txt = 'Not saved'; }
+    else if (this.pending) { s = 'saving'; txt = 'Saving…'; }
+    else if (Sync.busy) { s = 'saving'; txt = 'Syncing…'; }
+    else if (Sync.url && this.dirty) { s = 'wait'; txt = on ? `${this.dirty} to sync` : `Offline · ${this.dirty} to sync`; }
+    else if (Sync.url) { s = Sync.lastErr ? 'wait' : 'ok'; txt = Sync.lastErr ? 'Sync problem' : (on ? 'Synced' : 'Offline · all synced'); }
+    el.dataset.s = s; t.textContent = txt; el.title = this.error || Sync.lastErr || '';
   },
+  async mark(key, val) { await IDB.put('outbox', key, val ?? 1); this.dirty = (await IDB.keys('outbox')).length; this.status(); Sync.soon(); },
   get(col, id) { return this.cache[col][id]; },
   all(col) { return Object.entries(this.cache[col]).map(([id, v]) => ({ id, ...v })); },
-  put(col, id, data) { this.cache[col] = { ...this.cache[col], [id]: data }; return this.run(() => IDB.put(col, id, data)); },
-  patch(col, id, p) { const v = deepMerge(this.cache[col][id], p); this.cache[col] = { ...this.cache[col], [id]: v }; return this.run(() => IDB.put(col, id, v)); },
-  remove(col, id) { const c = { ...this.cache[col] }; delete c[id]; this.cache[col] = c; return this.run(() => IDB.del(col, id)); },
-  async savePhoto(blob) { const id = uid(); await IDB.put('photos', id, { blob, at: now() }); this.urls[id] = URL.createObjectURL(blob); return id; },
+  put(col, id, data) {
+    const v = { ...data, updatedAt: now() };
+    this.cache[col] = { ...this.cache[col], [id]: v };
+    return this.run(async () => { await IDB.put(col, id, v); await this.mark(`${col}/${id}`); });
+  },
+  patch(col, id, p) {
+    const v = { ...deepMerge(this.cache[col][id], p), updatedAt: now() };
+    this.cache[col] = { ...this.cache[col], [id]: v };
+    return this.run(async () => { await IDB.put(col, id, v); await this.mark(`${col}/${id}`); });
+  },
+  remove(col, id) {
+    const c = { ...this.cache[col] }; delete c[id]; this.cache[col] = c;
+    const t = { _deleted: true, updatedAt: now() };
+    return this.run(async () => { await IDB.put(col, id, t); await this.mark(`${col}/${id}`); });
+  },
+  // Write a record that came from the server (does not queue it for upload).
+  async local(col, id, v) {
+    const c = { ...this.cache[col] };
+    if (v._deleted) delete c[id]; else c[id] = v;
+    this.cache[col] = c;
+    await IDB.put(col, id, v);
+  },
+  async savePhoto(blob, inspId) { const id = uid(); await IDB.put('photos', id, { blob, at: now() }); this.urls[id] = URL.createObjectURL(blob); await this.mark('photo/' + id, inspId); return id; },
   photoSrc(id) {
     if (this.urls[id]) return this.urls[id];
-    IDB.get('photos', id).then(r => { if (!r) return; this.urls[id] = URL.createObjectURL(r.blob); document.querySelectorAll(`img[data-pid="${id}"]`).forEach(img => img.src = this.urls[id]); });
+    const show = blob => { if (!blob) return; this.urls[id] = this.urls[id] || URL.createObjectURL(blob); document.querySelectorAll(`img[data-pid="${id}"]`).forEach(img => img.src = this.urls[id]); };
+    IDB.get('photos', id).then(r => r ? show(r.blob) : Sync.fetchPhoto(id).then(show));
     return '';
   },
-  async photoBlob(id) { const r = await IDB.get('photos', id); return r ? r.blob : null; },
-  async removePhoto(id) { try { await IDB.del('photos', id); if (this.urls[id]) { URL.revokeObjectURL(this.urls[id]); delete this.urls[id]; } } catch {} },
+  async photoBlob(id) { const r = await IDB.get('photos', id); return r ? r.blob : await Sync.fetchPhoto(id); },
+  async removePhoto(id) {
+    try {
+      await IDB.del('photos', id); if (this.urls[id]) { URL.revokeObjectURL(this.urls[id]); delete this.urls[id]; }
+      const queued = await IDB.get('outbox', 'photo/' + id);
+      if (queued) { await IDB.del('outbox', 'photo/' + id); this.dirty = (await IDB.keys('outbox')).length; this.status(); }
+      else await this.mark('photodel/' + id);
+    } catch {}
+  },
 };
+
+/* =========================================================================
+   Online sync (Google Sheet + Drive through a Google Apps Script web app).
+   The phone always saves first. With signal: pull changes made elsewhere (merged per
+   component), push waiting changes, upload waiting photos. Without signal: nothing is lost,
+   the queue waits on the phone.
+   ========================================================================= */
+function blobToB64(blob) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob); }); }
+function b64ToBlob(b64, type = 'image/jpeg') { const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type }); }
+const stamp = x => x ? (x.updatedAt || x.takenAt || '') : '';
+function mergeMap(a = {}, b = {}) { const o = { ...a }; for (const k in b) { const x = a[k], y = b[k]; if (y && (!x || stamp(y) > stamp(x))) o[k] = y; } return o; }
+function mergeInspection(L, R) {
+  const newer = (R.updatedAt || '') > (L.updatedAt || '') ? R : L, older = newer === R ? L : R;
+  return { ...older, ...newer, items: mergeMap(L.items, R.items), photos: mergeMap(L.photos, R.photos) };
+}
+const Sync = {
+  busy: false, lastOk: lsGet('bsi-last-sync', null), lastErr: null, timer: null, inflight: {},
+  get url() { return String(lsGet('bsi-sync-url', '') || (window.BSI_CONFIG && window.BSI_CONFIG.syncUrl) || '').trim(); },
+  async post(body) {
+    let r;
+    try { r = await fetch(this.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' }); }
+    catch { throw new Error('Could not reach the sync server.'); }
+    if (!r.ok) throw new Error('Sync server answered ' + r.status + '.');
+    let j; try { j = await r.json(); } catch { throw new Error('Unexpected answer. Check the sync address and that the web app is shared with "Anyone".'); }
+    if (!j.ok) throw new Error(j.error || 'Sync server error.');
+    return j;
+  },
+  soon(ms = 6000) { clearTimeout(this.timer); this.timer = setTimeout(() => this.run(), ms); },
+  async run(manual) {
+    if (!this.url) { if (manual) toast('Add the sync address first (Data → Online sync).'); return; }
+    if (!navigator.onLine) { if (manual) toast('No signal. Changes stay on this phone and sync when signal returns.'); Store.status(); return; }
+    if (this.busy) return;
+    this.busy = true; Store.status();
+    let changed = false;
+    try {
+      // 1. Pull changes made on other devices.
+      const since = (await IDB.get('meta', 'cursor')) || 0;
+      const p = await this.post({ op: 'pull', since });
+      for (const rec of p.records || []) changed = (await this.applyRemote(rec)) || changed;
+      await IDB.put('meta', 'cursor', p.cursor || since);
+      // 2. Push bridges and inspections waiting on this phone.
+      const keys = await IDB.keys('outbox');
+      const recKeys = keys.filter(k => k.startsWith('bridges/') || k.startsWith('inspections/'));
+      for (let i = 0; i < recKeys.length; i += 15) {
+        const batch = [];
+        for (const k of recKeys.slice(i, i + 15)) {
+          const [col, id] = [k.slice(0, k.indexOf('/')), k.slice(k.indexOf('/') + 1)], v = await IDB.get(col, id);
+          if (!v) { await IDB.del('outbox', k); continue; }
+          batch.push({ key: k, col, id, updated_at: v.updatedAt || now(), deleted: !!v._deleted, data: v._deleted ? null : v });
+        }
+        if (!batch.length) continue;
+        const res = await this.post({ op: 'push', records: batch.map(({ key, ...r }) => r) });
+        for (const b of batch) { const cur = await IDB.get(b.col, b.id); if ((res.accepted || []).includes(b.key) && (cur?.updatedAt || '') === b.updated_at) await IDB.del('outbox', b.key); }
+        if ((res.stale || []).length) this.soon(1500);
+      }
+      // 3. Upload waiting photos (named by component, one Drive folder per inspection).
+      for (const k of keys.filter(k => k.startsWith('photo/'))) {
+        const id = k.slice(6), inspId = await IDB.get('outbox', k), r = await IDB.get('photos', id);
+        if (!r) { await IDB.del('outbox', k); continue; }
+        const insp = Store.get('inspections', inspId), b = insp && Store.get('bridges', insp.bridgeId), names = insp && b ? photoNames(insp, b) : {};
+        await this.post({ op: 'photo', id, inspection_id: inspId || '', file_name: (names[id] || id) + '.jpg', folder: insp && b ? pkgName(insp, b) : 'Unsorted', b64: await blobToB64(r.blob) });
+        await IDB.del('outbox', k);
+      }
+      for (const k of keys.filter(k => k.startsWith('photodel/'))) { await this.post({ op: 'photoDel', id: k.slice(9) }); await IDB.del('outbox', k); }
+      this.lastOk = now(); lsSet('bsi-last-sync', this.lastOk); this.lastErr = null;
+      if (manual) toast('Synced.');
+    } catch (e) {
+      this.lastErr = e.message || String(e);
+      if (manual) toast('Sync failed: ' + this.lastErr);
+    } finally {
+      this.busy = false;
+      Store.dirty = (await IDB.keys('outbox')).length; Store.status();
+      if (changed) onRemoteChange(); else if (S.route.name === 'data') render();
+    }
+  },
+  async applyRemote(rec) {
+    const { col, id } = rec; if (col !== 'bridges' && col !== 'inspections') return false;
+    const key = `${col}/${id}`, local = await IDB.get(col, id), dirty = !!(await IDB.get('outbox', key));
+    if (rec.deleted) {
+      if (!local || local._deleted) return false;
+      if (dirty && (local.updatedAt || '') > rec.updated_at) return false;
+      await Store.local(col, id, { _deleted: true, updatedAt: rec.updated_at }); await IDB.del('outbox', key); return true;
+    }
+    const remote = { ...rec.data, updatedAt: rec.updated_at };
+    if (!local || !dirty) {
+      if (local && JSON.stringify(local) === JSON.stringify(remote)) return false;
+      await Store.local(col, id, remote); return true;
+    }
+    if (local._deleted) return false;
+    if (col === 'bridges') {
+      if (rec.updated_at > (local.updatedAt || '')) { await Store.local(col, id, remote); await IDB.del('outbox', key); return true; }
+      return false;
+    }
+    // Inspection changed here and elsewhere: keep both, component by component; upload the result.
+    await Store.local(col, id, { ...mergeInspection(local, remote), updatedAt: now() });
+    return true;
+  },
+  fetchPhoto(id) {
+    if (!this.url || !navigator.onLine) return Promise.resolve(null);
+    if (this.inflight[id]) return this.inflight[id];
+    return this.inflight[id] = this.post({ op: 'getPhoto', id })
+      .then(async j => { const blob = b64ToBlob(j.b64); await IDB.put('photos', id, { blob, at: now(), fromServer: true }); return blob; })
+      .catch(() => null)
+      .finally(() => setTimeout(() => { delete this.inflight[id]; }, 30000));
+  },
+  // After a restore or a new sync address: queue everything on this phone for upload.
+  async queueAll() {
+    for (const col of ['bridges', 'inspections']) for (const id of Object.keys(Store.cache[col])) await IDB.put('outbox', `${col}/${id}`, 1);
+    for (const insp of Store.all('inspections')) for (const p of photosOf(insp)) if (await IDB.get('photos', p.id)) await IDB.put('outbox', 'photo/' + p.id, insp.id);
+    Store.dirty = (await IDB.keys('outbox')).length; Store.status();
+  },
+};
+window.addEventListener('online', () => { Store.status(); Sync.soon(500); });
+window.addEventListener('offline', () => Store.status());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) Sync.soon(1000); });
+setInterval(() => { if (!document.hidden) Sync.run(); }, 90000);
+function onRemoteChange() {
+  if (['home', 'bridge', 'checklist', 'review', 'data'].includes(S.route.name) && !document.activeElement?.matches('input,textarea,select')) render();
+}
 
 /* =========================================================================
    State, routing, helpers
@@ -480,6 +634,15 @@ function viewData() {
   <div class="card"><b>Stored on this device only</b>
     <span class="sub" id="usage">Checking storage…</span>
     <span class="sub">${Store.persisted ? 'Protected: the phone will not clear this data on its own.' : 'Not yet protected from automatic clean-up. Install the app on the home screen and open it from the icon.'} Export each inspection when finished, and back up regularly.</span></div>
+  <div class="sec"><div class="sec-h"><h3>Online sync · Google Drive</h3></div>
+    <div class="card">
+      <b>${!Sync.url ? 'Not set up' : Sync.busy ? 'Syncing…' : Sync.lastErr ? 'Last sync failed' : Sync.lastOk ? 'Last synced ' + new Date(Sync.lastOk).toLocaleString('en-AU') : 'Not synced yet'}</b>
+      <span class="sub">${Store.dirty ? `${Store.dirty} change${Store.dirty > 1 ? 's' : ''} or photo${Store.dirty > 1 ? 's' : ''} waiting on this phone` : 'Nothing waiting on this phone'}${navigator.onLine ? '' : ' · no signal now'}</span>
+      ${Sync.lastErr ? `<span class="sub" style="color:var(--danger)">${esc(Sync.lastErr)}</span>` : ''}
+      <label class="f"><span>Sync address (Google Apps Script web app URL)</span><input class="in mono" id="sync-url" value="${esc(Sync.url)}" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <div class="row wrap"><button class="btn out sm" data-act="sync-save">Save address</button><button class="btn sm" data-act="sync-now" ${Sync.url ? '' : 'disabled'}>Sync now</button></div>
+      <span class="sub">Everything is saved on this phone first. With signal, changes and photos go to the Google Sheet and Drive, and corrections made on other devices come back here (merged component by component). Photos go to Drive → Bridge Inspection → Photos → one folder per inspection. Anyone who has this address can read and change the online data.</span>
+    </div></div>
   <div class="sec"><div class="sec-h"><h3>Backup</h3></div>
     <button class="btn block" data-act="backup">Back up everything (ZIP)</button>
     <span class="sub">One file with every bridge, inspection and photo. Save it to Files, OneDrive or SharePoint. Use it to move to a new phone or recover data.</span>
@@ -730,7 +893,7 @@ const A = {
   },
   photo(d) { flushDraft(); photoTarget = { cid: d.cid, camera: true }; $('#photo-in').value = ''; $('#photo-in').click(); },
   'photo-lib'(d) { flushDraft(); photoTarget = { cid: d.cid }; $('#photo-lib').value = ''; $('#photo-lib').click(); },
-  async 'del-photo'(d) { await Store.patch('inspections', S.route.id, { photos: { [d.pid]: null } }); render(); Store.removePhoto(d.pid); },
+  async 'del-photo'(d) { await Store.patch('inspections', S.route.id, { photos: { [d.pid]: { deleted: true, updatedAt: now() } } }); render(); Store.removePhoto(d.pid); },
   async mark(d) {
     const insp = Store.get('inspections', d.id), b = Store.get('bridges', insp.bridgeId), pc = photoCounts(insp), patch = {};
     b.components.forEach(c => { if (!statusOf(itemsOf(insp)[c.id], pc[c.id]).done) patch[c.id] = { defects: [], none: d.v === 'none', na: d.v === 'na', comment: '', updatedAt: now() }; });
@@ -760,6 +923,18 @@ const A = {
   pics(d) { flushReview(); exportPackage(d.id, true); },
   json(d) { flushReview(); exportJson(d.id); },
   'gps-toggle'() { lsSet('bsi-gps', !lsGet('bsi-gps', true)); render(); },
+  async 'sync-save'() {
+    const v = $('#sync-url').value.trim(), cfg = String(window.BSI_CONFIG?.syncUrl || '').trim();
+    if (v && !/^https:\/\/script\.google(usercontent)?\.com\//.test(v)) { toast('That does not look like a Google Apps Script web app address (https://script.google.com/macros/s/…/exec).'); return; }
+    const changed = v !== Sync.url;
+    lsSet('bsi-sync-url', v === cfg ? '' : v);
+    if (changed) { await IDB.put('meta', 'cursor', 0); await Sync.queueAll(); }
+    if (!v) { render(); toast('Sync switched off on this phone.'); return; }
+    try { await Sync.post({ op: 'ping' }); toast('Connected. Syncing…'); Sync.run(); }
+    catch (e) { toast('Saved, but could not connect: ' + e.message); }
+    render();
+  },
+  'sync-now'() { Sync.run(true); render(); },
   'camroll-toggle'() { lsSet('bsi-camroll', !lsGet('bsi-camroll', true)); render(); },
   async 'save-all-photos'(d) {
     const insp = Store.get('inspections', d.id), b = Store.get('bridges', insp.bridgeId);
@@ -794,18 +969,30 @@ window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { flushDraft(); flushReview(); } });
 
 /* ---------- Photos: downscale, store on device, tag GPS ---------- */
-function downscale(file, max, q) {
+/* Photos are kept as large and sharp as possible but never over 2 MB:
+   full resolution (up to 4032 px) at high quality first, then lower quality, then smaller size. */
+const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+function loadImage(file) {
   return new Promise((res, rej) => {
     const url = URL.createObjectURL(file), img = new Image();
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-      c.toBlob(b => b ? res(b) : rej(new Error('Could not read photo')), 'image/jpeg', q);
-    };
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
     img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That file is not a readable image.')); };
     img.src = url;
   });
+}
+async function fitPhoto(file) {
+  const img = await loadImage(file), W = img.naturalWidth, H = img.naturalHeight;
+  let dim = Math.min(4032, Math.max(W, H)), q = 0.9, blob = null;
+  for (let i = 0; i < 12; i++) {
+    const k = dim / Math.max(W, H), c = document.createElement('canvas');
+    c.width = Math.round(W * k); c.height = Math.round(H * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q));
+    if (!blob) throw new Error('Could not read photo');
+    if (blob.size <= PHOTO_MAX_BYTES) return blob;
+    if (q > 0.72) q = Math.round((q - 0.06) * 100) / 100; else dim = Math.round(dim * 0.85);
+  }
+  return blob;
 }
 async function onPhotos(files) {
   if (!files || !files.length || !photoTarget) return;
@@ -814,8 +1001,9 @@ async function onPhotos(files) {
   for (const f of files) {
     try {
       Store.pending++; Store.status();
-      const id = await Store.savePhoto(await downscale(f, 2000, 0.8));
-      await Store.patch('inspections', inspId, { photos: { [id]: { componentId: tgt.cid, takenAt: now() } } });
+      const id = await Store.savePhoto(await fitPhoto(f), inspId);
+      const t = now();
+      await Store.patch('inspections', inspId, { photos: { [id]: { componentId: tgt.cid, takenAt: t, updatedAt: t } } });
       added.push(id);
     } catch (e) { Store.setError('Photo not saved: ' + (e.message || e)); }
     finally { Store.pending--; Store.status(); }
@@ -1039,14 +1227,16 @@ async function applyRestore() {
     for (const pf of r.photoFiles) { const id = pf.name.split('/').pop().replace(/\.jpg$/, ''); await IDB.put('photos', id, { blob: await pf.async('blob').then(b => new Blob([b], { type: 'image/jpeg' })), at: now() }); }
     for (const [id, v] of Object.entries(r.data.bridges || {})) await IDB.put('bridges', id, v);
     for (const [id, v] of Object.entries(r.data.inspections || {})) await IDB.put('inspections', id, v);
-    Store.cache.bridges = await IDB.all('bridges'); Store.cache.inspections = await IDB.all('inspections');
-    S.restore = null; render(); toast('Backup restored.');
+    const keep = m => Object.fromEntries(Object.entries(m).filter(([, v]) => v && !v._deleted));
+    Store.cache.bridges = keep(await IDB.all('bridges')); Store.cache.inspections = keep(await IDB.all('inspections'));
+    await Sync.queueAll();
+    S.restore = null; render(); toast('Backup restored.'); Sync.soon(1000);
   } catch (e) { console.error(e); Store.setError('Restore failed: ' + (e.message || e)); }
 }
 
 /* ---------- Boot ---------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline mode not available:', e));
-Store.init().then(render).catch(e => { console.error(e); $('#view').innerHTML = `<div class="card warn"><b>This browser blocked on-device storage.</b><span class="sub">${esc(e.message || e)}. Turn off private browsing, or open the installed app from its home-screen icon.</span></div>`; });
+Store.init().then(() => { render(); Sync.soon(800); }).catch(e => { console.error(e); $('#view').innerHTML = `<div class="card warn"><b>This browser blocked on-device storage.</b><span class="sub">${esc(e.message || e)}. Turn off private browsing, or open the installed app from its home-screen icon.</span></div>`; });
 </script>
 </body>
 </html>

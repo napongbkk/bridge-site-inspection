@@ -2,10 +2,11 @@
 // After that it opens with no signal. When there is signal, a newer version is
 // fetched in the background and used the next time the app is opened.
 // Bump VERSION whenever you upload changed files.
-const VERSION = 'bsi-v2';
+const VERSION = 'bsi-v3';
 const ASSETS = [
   './',
   './index.html',
+  './config.js',
   './lib/jszip.min.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
@@ -31,6 +32,12 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  // config.js: use the latest copy when online so a new sync address reaches every phone.
+  if (url.pathname.endsWith('/config.js')) {
+    e.respondWith(fetch(req).then((res) => { if (res.ok) { const c = res.clone(); caches.open(VERSION).then((x) => x.put('./config.js', c)); } return res; })
+      .catch(() => caches.match('./config.js')));
+    return;
+  }
 
   // Pages: answer from the phone straight away, refresh the copy in the background.
   if (req.mode === 'navigate') {
