@@ -139,3 +139,10 @@ Open the app link in Chrome or Edge on a computer (it syncs from Google Drive), 
 - Captions number automatically: "Picture 1: Abutment 1 Pile No.1 - …". Click a caption to change the description (↺ puts the automatic one back).
 - Hover a picture to change its size, rotate it (⟲ ⟳), make it full page, move or remove it.
 - **Export Word** downloads `<package>_Pictures.docx` laid out exactly as shown. The layout is remembered on that computer.
+
+## Source code and protection
+
+- The readable source is `src/index.html`. **Do not edit `index.html` directly**: it is generated.
+- After changing `src/index.html`, run `node build.mjs`. This minifies the code, shortens every name and encodes it, then writes the published `index.html`. Bump `VERSION` in `sw.js` so phones pick up the change.
+- `.vercelignore` stops `src/`, `build.mjs`, this README and the Apps Script from being published on the website.
+- Keep this GitHub repository **private** so the readable source in `src/` cannot be seen (Settings → General → Danger Zone → Change visibility → Private). Vercel keeps deploying from a private repository.

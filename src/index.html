@@ -1,0 +1,1887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#EDEFEC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121815" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bridge Inspect">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Bridge Site Inspection</title>
+<style>
+/* Layout: soft, light field app — pastel cards, pill controls, round icon buttons, week strip,
+   horizontal "in progress" cards, bottom tab bar with a centre + button. Max width 760px.
+   Palette: near-white ground, white cards with soft shadows, near-black ink, golden-yellow highlight,
+   one pastel per bridge type. System fonts so it works offline. */
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --ink:#16181D; --muted:#7A808C; --line:#ECEEF2; --well:#EEF0F4;
+  --accent:#16181D; --accent-ink:#FFFFFF;                 /* primary buttons: black pills */
+  --hi:#F6BB2C; --hi-ink:#16181D; --accent-line:#F6BB2C;  /* selected / highlight: golden yellow */
+  --link:#2F6FDE; --danger:#E5484D; --field:#FFFFFF; --field-line:#E6E8EE; --press:#F7F8FA;
+  --ok:#DFF3E5; --ok-ink:#1D6B3A; --def:#FFE4CC; --def-ink:#9A4A0B; --def-bar:#F08A3E;
+  --t-timber:#FDE8DA; --t-timber-ink:#B8582A; --t-concrete:#E3ECFA; --t-concrete-ink:#2F62B0;
+  --t-steel:#ECE6FA; --t-steel-ink:#6A4FC0; --t-underpass:#E0F3E8; --t-underpass-ink:#2B8653;
+  --shadow:0 6px 22px rgba(22,24,29,.07); --shadow-sm:0 2px 8px rgba(22,24,29,.06);
+  --r:20px;
+  --sans:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0F1115; --card:#1A1D23; --ink:#F2F3F5; --muted:#9097A3; --line:#262A32; --well:#22262E;
+  --accent:#F2F3F5; --accent-ink:#0F1115; --hi:#F6BB2C; --hi-ink:#16181D; --accent-line:#F6BB2C;
+  --link:#7FA8FF; --danger:#FF6B6B; --field:#15181D; --field-line:#2A2F38; --press:#20242B;
+  --ok:#1E3A28; --ok-ink:#9BE3B2; --def:#3D2A1A; --def-ink:#FFB27A; --def-bar:#E58A45;
+  --t-timber:#3A2A20; --t-timber-ink:#F2A776; --t-concrete:#1F2C42; --t-concrete-ink:#8DB4F5;
+  --t-steel:#2A2440; --t-steel-ink:#B9A4F5; --t-underpass:#1B3326; --t-underpass-ink:#86D6A6;
+  --shadow:0 6px 22px rgba(0,0,0,.35); --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  color-scheme:dark }}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* Top bar (inner screens): round back button, title, sync status */
+.bar{position:sticky;top:0;z-index:5;background:color-mix(in srgb, var(--bg) 92%, transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding-top:env(safe-area-inset-top,0px)}
+.bar-in{max-width:760px;margin:0 auto;padding:10px max(16px, env(safe-area-inset-right,0px)) 10px max(16px, env(safe-area-inset-left,0px));display:flex;align-items:center;gap:12px;min-height:60px}
+.bar h1{flex:1;margin:0;font-size:17px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{width:42px;height:42px;flex:0 0 auto;border:0;border-radius:50%;background:var(--card);box-shadow:var(--shadow-sm);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.back span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap;background:var(--card);padding:7px 11px;border-radius:999px;box-shadow:var(--shadow-sm)}
+.dot{width:8px;height:8px;border-radius:50%;background:#34C17A}
+.save[data-s="saving"] .dot{background:var(--hi)} .save[data-s="error"] .dot{background:var(--danger)} .save[data-s="wait"] .dot{background:var(--def-bar)}
+body.home .bar{display:none}
+
+main{max-width:760px;margin:0 auto;padding:12px max(16px, env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+body.has-tabs main{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+body.home main{padding-top:calc(14px + env(safe-area-inset-top,0px))}
+h2.big{margin:0;font-size:26px;font-weight:800;letter-spacing:-.5px;text-wrap:balance}
+h2.hero{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1.15;text-wrap:balance}
+.sub{font-size:13px;color:var(--muted)}
+.card{background:var(--card);border:0;border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.card.hot{box-shadow:var(--shadow),inset 0 0 0 2px var(--hi)}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.sec-h h3{margin:0;font-size:18px;font-weight:800;letter-spacing:-.2px;color:var(--ink)}
+.sec-h .more{border:0;background:none;color:var(--muted);font-size:14px;cursor:pointer;padding:6px 0}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+
+/* Buttons: pills */
+.btn{min-height:50px;padding:0 20px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;text-decoration:none}
+.btn.dark{background:var(--accent);color:var(--accent-ink)}
+.btn.yellow{background:var(--hi);color:var(--hi-ink)}
+.btn.out{background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--field-line)}
+.btn.ghost{background:transparent;color:var(--ink)} .btn.danger{background:var(--danger);color:#fff}
+.btn.sm{min-height:40px;padding:0 14px;font-size:14px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:active,.tap:active,.tile:active,.icb:active{transform:scale(.98)}
+.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.tap:focus-visible,.back:focus-visible,.tile:focus-visible,.icb:focus-visible,.day:focus-visible,.tabs button:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+.icb{width:44px;height:44px;flex:0 0 auto;border:0;border-radius:50%;background:var(--card);box-shadow:var(--shadow-sm);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;position:relative}
+.icb.yellow{background:var(--hi);color:var(--hi-ink)}
+.icb.soft{background:var(--well);box-shadow:none}
+.icb .badge-dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--def-bar);box-shadow:0 0 0 2px var(--card)}
+
+/* Segmented control: soft track, white thumb */
+.seg{display:flex;gap:4px;padding:4px;background:var(--well);border-radius:999px}
+.seg button{flex:1;min-height:40px;border:0;border-radius:999px;background:transparent;font-size:14px;cursor:pointer;padding:0 8px;color:var(--muted);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm)}
+
+/* Chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:42px;padding:0 16px;border-radius:999px;border:0;background:var(--card);box-shadow:var(--shadow-sm);font-size:14px;cursor:pointer;white-space:nowrap;flex:0 0 auto;color:var(--ink)}
+.chips.loc .chip{min-height:38px;padding:0 13px;font-size:13.5px}
+.chip[aria-pressed="true"]{background:var(--hi);color:var(--hi-ink);font-weight:700}
+.chips.loc .chip.alldone{background:var(--ok);color:var(--ok-ink);font-weight:700}
+.chips.loc .chip.alldone[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ok-ink)}
+.chips.loc .chip svg{width:14px;height:14px;vertical-align:-2px}
+.chip.okc[aria-pressed="true"]{background:var(--ok);color:var(--ok-ink)}
+.chip.nac[aria-pressed="true"]{background:var(--well);color:var(--ink)}
+.cat{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:6px 18px 6px 6px;border-radius:999px;border:0;background:var(--card);box-shadow:var(--shadow-sm);cursor:pointer;font-size:15px;font-weight:600;color:var(--ink)}
+.cat .ci{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.cat[aria-pressed="true"]{box-shadow:var(--shadow-sm),inset 0 0 0 2px var(--hi)}
+
+/* Badges and pills */
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well);color:var(--muted)} .b-note{background:var(--well)}
+.b-todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--danger);color:var(--danger)}
+.tap .badge.b-ok,.tap .badge.b-def,.tap .badge.b-na,.tap .badge.b-note{background:var(--ok);color:var(--ok-ink)}
+.st-todo{color:var(--danger);font-weight:700} .st-done{color:var(--ok-ink);font-weight:700}
+.pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--well);white-space:nowrap}
+.pill.hot{background:var(--hi);color:var(--hi-ink)}
+
+/* Fields */
+label.f{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+label.f span{font-size:13px;color:var(--muted);font-weight:600}
+input.in,select.in,textarea.in{min-height:52px;border-radius:16px;border:0;box-shadow:inset 0 0 0 1px var(--field-line);background:var(--field);padding:0 16px;font-size:16px;width:100%}
+textarea.in{min-height:104px;padding:14px 16px;resize:vertical}
+input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0 0 0 2px var(--link)}
+.search{display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 20px;border-radius:999px;background:var(--card);box-shadow:var(--shadow-sm)}
+.search input{flex:1;min-width:0;border:0;background:transparent;font-size:16px;outline:none;height:100%}
+.search svg{color:var(--muted);flex:0 0 auto;margin-right:10px}
+
+/* Lists */
+.tap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:0;border-radius:18px;padding:12px 14px;min-height:64px;cursor:pointer;box-shadow:var(--shadow-sm);color:var(--ink)}
+.tap:hover{background:var(--press)}
+.tap.just{box-shadow:var(--shadow-sm),inset 0 0 0 2px var(--hi)}
+.code{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--muted);width:58px;flex:0 0 auto}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.facts div{background:var(--card);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0;box-shadow:var(--shadow-sm)}
+.facts b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+@media (min-width:640px){.facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.prog{height:10px;border-radius:999px;background:var(--well);overflow:hidden;display:flex} .prog i{display:block;height:100%}
+.step{display:flex;align-items:center;gap:10px;min-height:56px}
+.step span.l{flex:1;font-weight:600}
+.step button{width:44px;height:44px;border-radius:50%;border:0;background:var(--well);font-size:22px;cursor:pointer;color:var(--ink)}
+.step b{width:34px;text-align:center;font-family:var(--mono);font-size:18px}
+
+/* Home: greeting, week strip, in-progress cards, bridge rows */
+.hello{display:flex;align-items:center;gap:12px}
+.avatar{width:48px;height:48px;border-radius:50%;background:var(--hi);color:var(--hi-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex:0 0 auto}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;background:var(--card);border-radius:var(--r);padding:12px 8px;box-shadow:var(--shadow-sm)}
+.day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 10px;border:0;border-radius:999px;background:transparent;cursor:pointer;color:var(--muted);font-size:12px;position:relative}
+.day b{font-size:16px;color:var(--ink);font-weight:700}
+.day[aria-pressed="true"]{background:var(--hi);color:var(--hi-ink)} .day[aria-pressed="true"] b{color:var(--hi-ink)}
+.day.has::after{content:'';position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:var(--def-bar)}
+.day[aria-pressed="true"].has::after{background:var(--hi-ink)}
+.hscroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 8px;margin:0 -2px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.icard{flex:0 0 min(70%, 230px);scroll-snap-align:start;border:0;border-radius:var(--r);padding:14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:10px;color:var(--ink)}
+.icard .top{display:flex;justify-content:space-between;align-items:center}
+.icard .ring{font-size:12px;font-weight:700;background:var(--card);border-radius:999px;padding:4px 9px}
+.icard b{font-size:16px;color:var(--ink)}
+.icard .sub{color:var(--ink);opacity:.7}
+.icard .bar2{height:6px;border-radius:999px;background:color-mix(in srgb, var(--card) 70%, transparent);overflow:hidden} .icard .bar2 i{display:block;height:100%;background:var(--ink)}
+.brow{display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:0;border-radius:var(--r);padding:14px;box-shadow:var(--shadow-sm);text-align:left;cursor:pointer;color:var(--ink)}
+.brow .when{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink);margin-top:8px}
+.ticon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;flex:0 0 auto}
+.t-timber{background:var(--t-timber);color:var(--t-timber-ink)} .t-concrete{background:var(--t-concrete);color:var(--t-concrete-ink)}
+.t-steel{background:var(--t-steel);color:var(--t-steel-ink)} .t-underpass{background:var(--t-underpass);color:var(--t-underpass-ink)}
+.tico{display:inline-flex}
+.folders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.folders{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.folder{display:flex;flex-direction:column;gap:10px;padding:10px;border:0;border-radius:var(--r);background:var(--card);box-shadow:var(--shadow-sm);cursor:pointer;text-align:left;color:var(--ink);min-width:0}
+.mosaic{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;aspect-ratio:1;max-width:100%;border-radius:14px;overflow:hidden;background:var(--well)}
+.mosaic img,.mosaic span{width:100%;height:100%;object-fit:cover;display:block;background:var(--well)}
+.ftitle{display:flex;align-items:center;gap:8px;min-width:0}
+.ftitle b{font-size:15px}
+.fic{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.fic svg{width:16px;height:16px}
+.spill{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap}
+.spill svg{width:14px;height:14px}
+.spill.ok{background:var(--ok);color:var(--ok-ink)} .spill.wait{background:var(--def);color:var(--def-ink)} .spill.off{background:var(--well);color:var(--muted)}
+.psync{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.psync svg{width:15px;height:15px}
+.psync.ok{background:#34C17A;color:#fff} .psync.wait{background:var(--def-bar);color:#fff} .psync.off{background:#9AA1AD;color:#fff}
+.lb{position:fixed;inset:0;z-index:20;background:#0B0C0F;color:#fff;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.lb-top{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+.lb-count{font-size:14px;opacity:.8}
+.lb-btn{width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+.lb-btn:disabled{opacity:.3}
+.lb-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.lb-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.lb-info{display:flex;flex-direction:column;gap:6px;padding:14px 16px 12px;max-width:760px;width:100%;margin:0 auto;font-size:14px}
+.lb-sub{opacity:.75;font-size:13px}
+.syncbox{flex-direction:row;align-items:center;gap:12px;padding:12px 12px 12px 16px}
+.syncbox b{font-size:15px}
+.sdot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:#34C17A;box-shadow:0 0 0 4px color-mix(in srgb, #34C17A 20%, transparent)}
+.sdot.wait{background:var(--def-bar);box-shadow:0 0 0 4px color-mix(in srgb, var(--def-bar) 22%, transparent)}
+.sdot.busy{background:var(--hi);box-shadow:0 0 0 4px color-mix(in srgb, var(--hi) 25%, transparent)}
+.sdot.off{background:#9AA1AD;box-shadow:0 0 0 4px color-mix(in srgb, #9AA1AD 22%, transparent)}
+.sdot.err{background:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb, var(--danger) 20%, transparent)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:340px){.tiles{grid-template-columns:minmax(0,1fr)}}
+.tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:16px;text-align:left;padding:16px;border:0;border-radius:var(--r);cursor:pointer;min-height:132px;color:var(--ink)}
+.tile .ticon{background:var(--card)}
+.tile b{font-size:16px;font-weight:800}
+
+/* Photos */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.ph{position:relative;aspect-ratio:1;max-width:100%;border-radius:16px;overflow:hidden;background:var(--well);border:0;padding:0;cursor:pointer;display:block}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .pname{position:absolute;left:6px;right:6px;bottom:6px;padding:3px 7px;background:rgba(0,0,0,.55);color:#fff;font-family:var(--mono);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:999px}
+.ph button{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:16px;line-height:1}
+
+.warn{background:color-mix(in srgb, var(--hi) 16%, var(--card));box-shadow:var(--shadow-sm)}
+.fin{border:2px solid var(--ink)}
+.confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--well)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;z-index:9;max-width:calc(100% - 32px);box-shadow:var(--shadow);text-align:center}
+.stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top, var(--bg) 70%, transparent)}
+
+/* Bottom tab bar with centre + */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:0 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.tabs-in{max-width:520px;margin:0 auto;height:68px;background:var(--card);border-radius:26px;box-shadow:0 8px 30px rgba(22,24,29,.12);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center}
+.tabs button{border:0;background:transparent;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:600;cursor:pointer}
+.tabs button[aria-current="page"]{color:var(--ink)}
+.tabs button[aria-current="page"] svg{color:var(--hi)}
+.tabs .plus{width:58px;height:58px;border-radius:50%;background:var(--accent);color:var(--accent-ink);margin:-26px auto 0;box-shadow:0 8px 20px rgba(22,24,29,.25);font-size:0}
+.tabs .plus svg{color:var(--accent-ink)!important}
+
+/* Bottom sheet (share, new bridge) */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-radius:26px 26px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.18);padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:var(--line);margin:0 auto 12px}
+.sheet-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* Picture report (PC) */
+.credit{margin:8px 0 0;text-align:center;font-size:12px;letter-spacing:.04em;color:var(--muted);opacity:.85}
+body.wide .credit{grid-column:1/-1;padding:12px 0 20px}
+.desk-only{display:none} @media (min-width:900px){.desk-only{display:flex}}
+.pr-cta{align-items:center;gap:16px;width:100%;padding:16px 18px;border:0;border-radius:var(--r);background:var(--card);box-shadow:var(--shadow-sm);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.pr-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(22,24,29,.10)}
+.pr-cta:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+.pr-cta-ic{flex:0 0 auto;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--hi);color:var(--hi-ink)}
+.pr-cta-ic svg{width:26px;height:26px}
+.pr-cta-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pr-cta-tx b{font-size:16px} .pr-cta-tx span{font-size:13.5px;color:var(--muted)}
+.pr-cta-go{flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;padding:10px 14px 10px 18px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:14px}
+body.wide main{max-width:none;padding:0;gap:0} body.wide .bar-in{max-width:none}
+.pr{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:calc(100vh - 62px)}
+.pr-side{position:sticky;top:62px;height:calc(100vh - 62px);overflow:auto;padding:16px;background:var(--card);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:12px}
+.pr-side>*,.pr-side>label.f{flex:0 0 auto}
+.pr-loc h4{margin:6px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pr-el{border-radius:14px;background:var(--well);margin-bottom:6px;overflow:hidden}
+.pr-eh{display:flex;align-items:center;cursor:grab}
+.pr-et{flex:1;display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;padding:10px 4px 10px 10px;cursor:pointer;min-height:44px}
+.pr-et svg{transition:transform .15s;flex:0 0 auto} .pr-el.open .pr-et svg{transform:rotate(90deg)}
+.pr-cnt{font-size:12px;color:var(--muted);font-weight:600} .pr-cnt.all{color:var(--ok-ink)}
+.pr-plus{border:0;background:var(--card);color:var(--ink);width:32px;height:32px;border-radius:10px;margin-right:6px;font-size:18px;cursor:pointer} .pr-plus:disabled{opacity:.35;cursor:default}
+.pr-thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 8px 10px}
+.pr-th{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--card);cursor:grab}
+.pr-th img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.pr-th .pname{font-size:9.5px}
+.pr-th.used img{opacity:.45}
+.pr-add,.pr-num{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:999px;border:0;display:grid;place-items:center;font-size:15px;font-weight:800;line-height:1}
+.pr-add{background:var(--ink);color:var(--bg);cursor:pointer} .pr-num{background:var(--ok);color:var(--ok-ink);font-size:12px}
+.pr-work{padding:0 24px 60px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pr-tools{position:sticky;top:62px;z-index:3;background:var(--bg);display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 0}
+.pr-tools .in{min-height:40px}
+.pr-pages{display:flex;flex-direction:column;align-items:center;gap:24px;overflow-x:auto;padding-bottom:20px}
+.pg{position:relative;flex:0 0 auto;box-sizing:border-box;width:calc(210 * var(--mm));height:calc(297 * var(--mm));padding:calc(20 * var(--mm));background:#fff;color:#111;box-shadow:0 2px 16px rgba(0,0,0,.14);display:flex;flex-direction:column;overflow:hidden}
+.pg.ghost{opacity:.75}
+.pg-head{position:absolute;top:calc(10 * var(--mm));left:calc(20 * var(--mm));right:calc(20 * var(--mm));text-align:center;font:calc(3.2 * var(--mm))/1.2 Calibri,Arial,sans-serif;color:#555}
+.pg-no{position:absolute;bottom:calc(8 * var(--mm));right:calc(20 * var(--mm));font:calc(3.2 * var(--mm)) Calibri,Arial,sans-serif;color:#555}
+.pr-fig{margin:0 0 calc(4 * var(--mm));position:relative;display:flex;flex-direction:column;align-items:center;border-radius:6px;outline:2px dashed transparent;outline-offset:2px;cursor:grab}
+.pr-fig:hover,.pr-fig:focus-within{outline-color:#c3c9d2}
+.pr-fig.dragging{opacity:.4}
+.pr-fig img{display:block;width:auto;height:auto;background:#eee;min-width:calc(20 * var(--mm));min-height:calc(15 * var(--mm))}
+.pr-fig figcaption{font:700 calc(3.53 * var(--mm))/1.25 Calibri,Arial,sans-serif;text-align:center;margin-top:calc(1 * var(--mm));max-width:100%;color:#111;cursor:text}
+.pr-cap{outline:none;border-bottom:1px dashed transparent;padding:0 2px} .pr-cap:hover{border-bottom-color:#9aa3ad} .pr-cap:focus{background:#fff7d6;border-bottom-color:#16181d}
+.pr-reset{border:0;background:#eef0f3;border-radius:6px;cursor:pointer;font-size:12px;padding:1px 6px;color:#333}
+.pr-ft{position:absolute;top:6px;right:6px;display:none;gap:6px;align-items:center;background:var(--card);color:var(--ink);border-radius:12px;padding:6px 8px;box-shadow:0 4px 16px rgba(0,0,0,.18);font:600 12px system-ui,sans-serif;z-index:2;cursor:default}
+.pr-fig:hover .pr-ft,.pr-fig:focus-within .pr-ft{display:flex}
+.pr-ft label{display:flex;align-items:center;gap:6px} .pr-ft input[type=range]{width:110px;accent-color:var(--ink)}
+.pr-ft button{border:0;background:var(--well);color:var(--ink);border-radius:8px;min-width:28px;height:28px;padding:0 8px;font:inherit;cursor:pointer} .pr-ft button:disabled{opacity:.35}
+.pr-dim{color:var(--muted);min-width:84px}
+.pr-drop{flex:1;min-height:calc(30 * var(--mm));border:2px dashed #c3c9d2;border-radius:12px;display:grid;place-items:center;color:#6b7380;font:600 14px system-ui,sans-serif;text-align:center;padding:12px}
+.pr-drop.over{border-color:var(--link);background:rgba(47,111,222,.07);color:var(--link)}
+.pr-fig.over-top{box-shadow:0 -5px 0 var(--link)} .pr-fig.over-bot{box-shadow:0 5px 0 var(--link)}
+@media (max-width:899px){.pr{grid-template-columns:1fr}.pr-side{position:static;height:auto;max-height:55vh}.pr-work{padding:0 12px 40px}.pr-tools{top:62px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="bar-in">
+  <button class="back" id="back" data-act="back" hidden aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span id="back-l">Back</span></button>
+  <h1 id="title">Bridge Site Inspection</h1>
+  <span class="save" id="save" data-s="ok" role="status"><span class="dot"></span><span id="save-t">Opening…</span></span>
+</div></header>
+<main id="view" aria-live="polite">
+  <div class="card"><b>Opening your inspections…</b><span class="sub">Everything is stored on this device.</span></div>
+</main>
+<nav class="tabs" id="tabs" hidden aria-label="Main"><div class="tabs-in">
+  <button data-act="tab" data-v="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</button>
+  <button data-act="tab" data-v="inspections"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Inspections</button>
+  <button class="plus" data-act="plus" aria-label="Set up a new bridge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button data-act="tab" data-v="photos"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 8"/></svg>Photos</button>
+  <button data-act="tab" data-v="data"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>Data</button>
+</div></nav>
+<div class="sheet" id="sheet" hidden></div>
+<div class="lb" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Photo"></div>
+<input type="file" id="photo-in" accept="image/*" capture="environment" class="sr" aria-label="Take a photo">
+<input type="file" id="photo-lib" accept="image/*" multiple class="sr" aria-label="Choose photos">
+<input type="file" id="restore-in" accept=".zip,application/zip" class="sr" aria-label="Choose a backup file">
+<div class="toast" id="toast" hidden></div>
+
+<script src="lib/jszip.min.js"></script>
+<script src="config.js"></script>
+<script>
+'use strict';
+/* =========================================================================
+   Bridge templates. Each type builds its own component list (numbering in the direction of
+   increasing SLK; piers ascending from A1; piles, girders and columns left to right facing
+   increasing SLK). `ph` = photo file name.
+   ========================================================================= */
+const ICONS = {
+  timber: '<path d="M3 12h58M3 9h58M9 12v24M25 12v24M41 12v24M57 12v24M9 18l16 12M25 18L9 30M41 18l16 12M57 18L41 30"/>',
+  concrete: '<path d="M3 8h58v7H3zM10 15l6 5h32l6-5M22 20v16M42 20v16M17 36h10M37 36h10"/>',
+  steel: '<path d="M3 26h58M3 26L11 8h42l8 18M11 8l8 18 9-18 8 18 9-18 8 18M15 26v10M49 26v10"/>',
+  underpass: '<path d="M3 8h58M3 13h58M14 36V18h36v18M18 36V22h28v14M3 36h58M28 31h8"/>',
+};
+const TEMPLATES = {
+  timber: {
+    name: 'Timber bridge', blurb: 'Stringers, halfcaps, corbels, timber piles, sheeting abutments',
+    params: [['spans', 'Spans', 1, 30, 3], ['stringersPerSpan', 'Stringers per span', 1, 12, 5], ['pilesPerPier', 'Piles per pier', 1, 12, 4], ['abutPiles', 'Piles per abutment', 0, 12, 4]],
+    choices: [['abutType', 'Abutment type', [['sheeting', 'Sill beam + sheeting'], ['bedlog', 'Bedlog']]], ['corbels', 'Corbels at piers', [['yes', 'Yes'], ['no', 'No']]]],
+    defects: ['White rot', 'Brown rot', 'Soft rot', 'Friable timber', 'Termite attack', 'Marine borer', 'Pipe / cavity', 'Splitting', 'Crushing', 'Poor seating', 'Fire damage', 'Weathering', 'Loose / missing fastener', 'Impact damage', 'Debris / vegetation'],
+  },
+  concrete: {
+    name: 'Concrete bridge', blurb: 'Girders or slab deck, headstocks, columns, bearings, joints',
+    params: [['spans', 'Spans', 1, 30, 3], ['girdersPerSpan', 'Girders per span (0 = slab deck)', 0, 20, 4], ['columnsPerPier', 'Columns per pier', 1, 8, 2]],
+    choices: [],
+    defects: ['Cracking', 'Spalling', 'Delamination', 'Exposed reinforcement', 'Corrosion staining', 'Efflorescence / leaching', 'Honeycombing', 'Scaling', 'Abrasion / erosion', 'Water seepage', 'Bearing defect', 'Joint defect', 'Impact damage', 'Scour', 'Debris / vegetation'],
+  },
+  steel: {
+    name: 'Steel bridge', blurb: 'Steel girders, bracing, connections, coating, bearings',
+    params: [['spans', 'Spans', 1, 30, 2], ['girdersPerSpan', 'Steel girders per span', 1, 20, 4], ['columnsPerPier', 'Columns per pier', 1, 8, 2]],
+    choices: [['deckType', 'Deck', [['concrete', 'Concrete'], ['steel', 'Steel'], ['timber', 'Timber']]]],
+    defects: ['Surface corrosion', 'Section loss', 'Coating breakdown', 'Cracking', 'Distortion / buckling', 'Loose / missing bolts or rivets', 'Weld defect', 'Bearing defect', 'Joint defect', 'Impact damage', 'Debris build-up', 'Bird / pest fouling', 'Scour'],
+  },
+  underpass: {
+    name: 'Underpass', blurb: 'Entries, headwalls, walls, roof, floor, joints, drainage, lighting',
+    params: [['units', 'Units / segments', 1, 40, 6]],
+    choices: [['form', 'Structure form', [['box', 'Box units'], ['arch', 'Arch'], ['slab', 'Slab on walls']]]],
+    defects: ['Cracking', 'Spalling', 'Exposed reinforcement', 'Water ingress / seepage', 'Efflorescence / leaching', 'Joint opening / failure', 'Settlement / misalignment', 'Drainage blocked', 'Ponding', 'Lighting fault', 'Graffiti / vandalism', 'Debris / litter', 'Scour at inlet / outlet', 'Impact damage'],
+  },
+};
+const LEVELS = { 1: 'Level 1 · Routine', 2: 'Level 2 · Detailed' };
+const typeOf = b => TEMPLATES[b?.type] ? b.type : 'timber';
+
+function generateComponents(type, l) {
+  const out = []; let order = 0;
+  const add = (loc, code, name, ph) => out.push({ id: code.replace(/\//g, '_'), code, loc, o: order, name, ph });
+  const A = a => 'Abut' + a.slice(1), Sp = s => 'Span' + s.slice(1), Pi = p => 'Pier' + p.slice(1);
+  const walkSpans = (abut, span, pier) => { order++; abut('A1'); for (let s = 1; s <= l.spans; s++) { order++; span('S' + s); if (s < l.spans) { order++; pier('P' + s); } } order++; abut('A2'); };
+
+  if (type === 'timber') {
+    add('GEN', 'GR', 'Guardrail / barriers', 'General_Guardrail');
+    add('GEN', 'AP', 'Approach & expansion joint', 'General_Approach');
+    walkSpans(a => {
+      add(a, a + '-SH', 'Abutment sheeting', A(a) + '_Sheeting');
+      add(a, a + '-WL', 'Wing wall sheeting LHS', A(a) + '_WingLHS');
+      add(a, a + '-WR', 'Wing wall sheeting RHS', A(a) + '_WingRHS');
+      l.abutType === 'bedlog' ? add(a, a + '-BL', 'Bedlog', A(a) + '_Bedlog') : add(a, a + '-SB', 'Sill beam', A(a) + '_SillBeam');
+      add(a, a + '-HC', 'Halfcap', A(a) + '_Halfcap');
+      for (let i = 1; i <= l.abutPiles; i++) add(a, `${a}/${i}`, `Pile ${i}`, `${A(a)}_P${i}`);
+    }, s => {
+      for (let i = 1; i <= l.stringersPerSpan; i++) add(s, `${s}-${i}`, `Stringer ${i}`, `${Sp(s)}_S${i}`);
+      add(s, s + '-DK', 'Deck planks', Sp(s) + '_Deck');
+      add(s, s + '-KL', 'Kerb LHS', Sp(s) + '_KerbLHS');
+      add(s, s + '-KR', 'Kerb RHS', Sp(s) + '_KerbRHS');
+    }, p => {
+      add(p, p + '-HC', 'Halfcap', Pi(p) + '_Halfcap');
+      if (l.corbels !== 'no') add(p, p + '-CB', 'Corbels', Pi(p) + '_Corbels');
+      for (let i = 1; i <= l.pilesPerPier; i++) add(p, `${p}/${i}`, `Pile ${i}`, `${Pi(p)}_P${i}`);
+      add(p, p + '-BR', 'Bracing / walers', Pi(p) + '_Bracing');
+    });
+  } else if (type === 'concrete' || type === 'steel') {
+    const steel = type === 'steel';
+    add('GEN', 'GR', 'Barriers / railings', 'General_Barriers');
+    add('GEN', 'AP', 'Approach slabs', 'General_Approach');
+    add('GEN', 'EJ', 'Expansion joints', 'General_ExpJoints');
+    add('GEN', 'WS', 'Deck wearing surface', 'General_Surface');
+    add('GEN', 'DR', 'Deck drainage', 'General_Drainage');
+    walkSpans(a => {
+      add(a, a + '-AW', 'Abutment wall / headstock', A(a) + '_Wall');
+      add(a, a + '-WL', 'Wing wall LHS', A(a) + '_WingLHS');
+      add(a, a + '-WR', 'Wing wall RHS', A(a) + '_WingRHS');
+      add(a, a + '-BG', 'Bearings', A(a) + '_Bearings');
+      add(a, a + '-FT', 'Footing / piles', A(a) + '_Footing');
+      add(a, a + '-EM', 'Embankment & batter protection', A(a) + '_Embankment');
+    }, s => {
+      for (let i = 1; i <= l.girdersPerSpan; i++) add(s, `${s}-G${i}`, `${steel ? 'Steel girder' : 'Girder'} ${i}`, `${Sp(s)}_G${i}`);
+      if (steel) {
+        add(s, s + '-XB', 'Cross girders / bracing', Sp(s) + '_Bracing');
+        add(s, s + '-CN', 'Connections & splices', Sp(s) + '_Connections');
+        add(s, s + '-DK', { concrete: 'Concrete deck slab', steel: 'Steel deck', timber: 'Timber deck' }[l.deckType || 'concrete'], Sp(s) + '_Deck');
+        add(s, s + '-PC', 'Protective coating', Sp(s) + '_Coating');
+      } else {
+        add(s, s + '-DS', l.girdersPerSpan ? 'Deck slab' : 'Deck slab (soffit)', Sp(s) + '_DeckSlab');
+        if (l.girdersPerSpan) add(s, s + '-DI', 'Diaphragms', Sp(s) + '_Diaphragms');
+      }
+      add(s, s + '-KL', 'Kerb / footway LHS', Sp(s) + '_KerbLHS');
+      add(s, s + '-KR', 'Kerb / footway RHS', Sp(s) + '_KerbRHS');
+    }, p => {
+      add(p, p + '-HS', 'Headstock', Pi(p) + '_Headstock');
+      for (let i = 1; i <= l.columnsPerPier; i++) add(p, `${p}-C${i}`, `Column ${i}`, `${Pi(p)}_C${i}`);
+      add(p, p + '-BG', 'Bearings', Pi(p) + '_Bearings');
+      add(p, p + '-FT', 'Footing / piles', Pi(p) + '_Footing');
+    });
+  } else if (type === 'underpass') {
+    const roof = { box: 'Roof slab', arch: 'Arch barrel', slab: 'Deck soffit' }[l.form || 'box'];
+    add('GEN', 'GR', 'Barriers / handrails', 'General_Barriers');
+    add('GEN', 'LT', 'Lighting', 'General_Lighting');
+    add('GEN', 'SG', 'Signage & clearance markers', 'General_Signage');
+    add('GEN', 'DR', 'Drainage & pumps', 'General_Drainage');
+    const entry = e => { order++; const n = 'Entry' + e.slice(1);
+      add(e, e + '-HW', 'Headwall / portal', n + '_Headwall');
+      add(e, e + '-WL', 'Wing wall LHS', n + '_WingLHS');
+      add(e, e + '-WR', 'Wing wall RHS', n + '_WingRHS');
+      add(e, e + '-AP', 'Approach, ramp & apron', n + '_Approach');
+    };
+    entry('E1');
+    for (let u = 1; u <= l.units; u++) { order++; const U = 'U' + u, n = 'Unit' + u;
+      add(U, U + '-LW', 'Wall LHS', n + '_WallLHS');
+      add(U, U + '-RW', 'Wall RHS', n + '_WallRHS');
+      add(U, U + '-RF', roof, n + '_Roof');
+      add(U, U + '-FL', 'Floor / invert', n + '_Floor');
+      if (u < l.units) add(U, U + '-JT', `Joint to unit ${u + 1}`, n + '_Joint');
+    }
+    entry('E2');
+  }
+  return out;
+}
+const locLabel = l => l === 'GEN' ? 'General' : ({ A: 'Abut ', S: 'Span ', P: 'Pier ', E: 'Entry ', U: 'Unit ' }[l[0]] || '') + l.slice(1);
+const locFull = l => l === 'GEN' ? '' : ({ A: 'Abutment', S: 'Span', P: 'Pier', E: 'Entry', U: 'Unit' }[l[0]] || l[0]) + ' ' + l.slice(1);
+const compFull = c => c.name.replace(/^(Pile|Stringer|Girder|Steel girder|Column) (\d+)$/, '$1 No.$2');
+
+function factsOf(b) {
+  const t = typeOf(b), L = b.layout || {};
+  if (t === 'timber') return [['Type', 'Timber'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Piers', `${L.spans - 1} · ${L.pilesPerPier} piles each`], ['Stringers', `${L.stringersPerSpan} per span`], ['Abutments', L.abutType === 'bedlog' ? 'Bedlog' : 'Sill beam + sheeting'], ['Corbels', L.corbels === 'no' ? 'No' : 'Yes']];
+  if (t === 'underpass') return [['Type', 'Underpass'], ['Units', `${L.units} · Entry 1 → Entry 2`], ['Form', { box: 'Box units', arch: 'Arch', slab: 'Slab on walls' }[L.form || 'box']]];
+  return [['Type', t === 'steel' ? 'Steel' : 'Concrete'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Girders', L.girdersPerSpan ? `${L.girdersPerSpan} per span` : 'Slab deck'], ['Piers', `${L.spans - 1} · ${L.columnsPerPier} column${L.columnsPerPier > 1 ? 's' : ''} each`], ...(t === 'steel' ? [['Deck', { concrete: 'Concrete', steel: 'Steel', timber: 'Timber' }[L.deckType || 'concrete']]] : [])];
+}
+
+/* =========================================================================
+   Utilities
+   ========================================================================= */
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(1) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB';
+const isObj = v => v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Blob);
+function deepMerge(t, p) { const o = isObj(t) ? { ...t } : {}; for (const k in p) o[k] = isObj(p[k]) && isObj(o[k]) ? deepMerge(o[k], p[k]) : p[k]; return o; }
+const live = m => Object.entries(m || {}).filter(([, v]) => v != null && !v.deleted);
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); }
+const svgI = d => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON = { folder: svgI('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'), clock: svgI('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'), check: svgI('<path d="M5 12l5 5L20 7"/>'), phone: svgI('<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>'), x: svgI('<path d="M6 6l12 12M18 6L6 18"/>'), left: svgI('<path d="M15 6l-6 6 6 6"/>'), sync: svgI('<path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>'), search: svgI('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'), cal: svgI('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), play: svgI('<path d="M8 5l11 7-11 7z"/>'), doc: svgI('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>'), mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
+const typeIcon = (t, w = 64, h = 40) => `<svg width="${w}" height="${h}" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t]}</svg>`;
+const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+const isAndroid = () => /Android/i.test(navigator.userAgent);
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/* =========================================================================
+   Storage on this device: IndexedDB stores bridges, inspections and photo files.
+   Nothing leaves the phone until you export.
+   ========================================================================= */
+const IDB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('bridge-site-inspection', 2);
+      r.onupgradeneeded = () => { const d = r.result; ['bridges', 'inspections', 'photos', 'outbox', 'meta'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n); }); };
+      r.onsuccess = () => { this.db = r.result; res(); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  req(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode), q = fn(t.objectStore(store)); let out;
+      if (q) q.onsuccess = () => { out = q.result; };
+      t.oncomplete = () => res(out); t.onerror = t.onabort = () => rej(t.error || new Error('Storage write failed'));
+    });
+  },
+  get(s, k) { return this.req(s, 'readonly', st => st.get(k)); },
+  put(s, k, v) { return this.req(s, 'readwrite', st => st.put(v, k)); },
+  del(s, k) { return this.req(s, 'readwrite', st => st.delete(k)); },
+  keys(s) { return this.req(s, 'readonly', st => st.getAllKeys()); },
+  all(s) {
+    return new Promise((res, rej) => {
+      const out = {}, t = this.db.transaction(s), c = t.objectStore(s).openCursor();
+      c.onsuccess = () => { const cur = c.result; if (cur) { out[cur.key] = cur.value; cur.continue(); } };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error);
+    });
+  },
+};
+const Store = {
+  pending: 0, error: null, persisted: false, dirty: 0,
+  cache: { bridges: {}, inspections: {} }, urls: {},
+  async init() {
+    await IDB.open();
+    const keep = m => Object.fromEntries(Object.entries(m).filter(([, v]) => v && !v._deleted));
+    this.cache.bridges = keep(await IDB.all('bridges'));
+    this.cache.inspections = keep(await IDB.all('inspections'));
+    await this.recount();
+    try { this.persisted = await navigator.storage?.persisted?.() || false; if (!this.persisted) this.persisted = await navigator.storage?.persist?.() || false; } catch {}
+    this.status();
+  },
+  async run(fn) {
+    this.pending++; this.status();
+    try { await fn(); this.error = null; }
+    catch (e) { this.setError(e && e.name === 'QuotaExceededError' ? 'Phone storage is full. Export and delete old inspections, then try again.' : 'Could not save on this device: ' + (e.message || e)); }
+    finally { this.pending--; this.status(); }
+  },
+  setError(m) { this.error = m; this.status(); toast(m); },
+  status() {
+    const el = $('#save'), t = $('#save-t'), on = navigator.onLine;
+    let s = 'ok', txt = 'Saved on device';
+    if (this.error) { s = 'error'; txt = 'Not saved'; }
+    else if (this.pending) { s = 'saving'; txt = 'Saving…'; }
+    else if (Sync.busy) { s = 'saving'; txt = 'Syncing…'; }
+    else if (Sync.url && this.dirty) { s = 'wait'; txt = on ? `${this.dirty} to sync` : `Offline · ${this.dirty} to sync`; }
+    else if (Sync.url) { s = Sync.lastErr ? 'wait' : 'ok'; txt = Sync.lastErr ? 'Sync problem' : (on ? 'Synced' : 'Offline · all synced'); }
+    el.dataset.s = s; t.textContent = txt; el.title = this.error || Sync.lastErr || '';
+    const sb = document.getElementById('syncbox'); if (sb) sb.innerHTML = syncBoxHtml();
+  },
+  async recount() {
+    const k = await IDB.keys('outbox'), before = [...(this.pendPhotos || [])].join();
+    this.dirty = k.length; this.qPhotos = k.filter(x => x.startsWith('photo')).length; this.qRec = this.dirty - this.qPhotos;
+    this.pendPhotos = new Set(k.filter(x => x.startsWith('photo/')).map(x => x.slice(6)));
+    if (before !== [...this.pendPhotos].join() && ['photos', 'photofolder'].includes(S.route?.name)) { render(); if (!$('#lightbox').hidden) lbRender(); }
+  },
+  async mark(key, val) { await IDB.put('outbox', key, val ?? 1); await this.recount(); this.status(); Sync.soon(); },
+  get(col, id) { return this.cache[col][id]; },
+  all(col) { return Object.entries(this.cache[col]).map(([id, v]) => ({ id, ...v })); },
+  put(col, id, data) {
+    const v = { ...data, updatedAt: now() };
+    this.cache[col] = { ...this.cache[col], [id]: v };
+    return this.run(async () => { await IDB.put(col, id, v); await this.mark(`${col}/${id}`); });
+  },
+  patch(col, id, p) {
+    const v = { ...deepMerge(this.cache[col][id], p), updatedAt: now() };
+    this.cache[col] = { ...this.cache[col], [id]: v };
+    return this.run(async () => { await IDB.put(col, id, v); await this.mark(`${col}/${id}`); });
+  },
+  remove(col, id) {
+    const c = { ...this.cache[col] }; delete c[id]; this.cache[col] = c;
+    const t = { _deleted: true, updatedAt: now() };
+    return this.run(async () => { await IDB.put(col, id, t); await this.mark(`${col}/${id}`); });
+  },
+  // Write a record that came from the server (does not queue it for upload).
+  async local(col, id, v) {
+    const c = { ...this.cache[col] };
+    if (v._deleted) delete c[id]; else c[id] = v;
+    this.cache[col] = c;
+    await IDB.put(col, id, v);
+  },
+  async savePhoto(blob, inspId) { const id = uid(); await IDB.put('photos', id, { blob, at: now() }); this.urls[id] = URL.createObjectURL(blob); await this.mark('photo/' + id, inspId); return id; },
+  photoSrc(id) {
+    if (this.urls[id]) return this.urls[id];
+    const show = blob => { if (!blob) return; this.urls[id] = this.urls[id] || URL.createObjectURL(blob); document.querySelectorAll(`img[data-pid="${id}"]`).forEach(img => img.src = this.urls[id]); };
+    IDB.get('photos', id).then(r => r ? show(r.blob) : Sync.fetchPhoto(id).then(show));
+    return '';
+  },
+  async photoBlob(id) { const r = await IDB.get('photos', id); return r ? r.blob : await Sync.fetchPhoto(id); },
+  async removePhoto(id) {
+    try {
+      await IDB.del('photos', id); if (this.urls[id]) { URL.revokeObjectURL(this.urls[id]); delete this.urls[id]; }
+      const queued = await IDB.get('outbox', 'photo/' + id);
+      if (queued) { await IDB.del('outbox', 'photo/' + id); await this.recount(); this.status(); }
+      else await this.mark('photodel/' + id);
+    } catch {}
+  },
+};
+
+/* =========================================================================
+   Online sync (Google Sheet + Drive through a Google Apps Script web app).
+   The phone always saves first. With signal: pull changes made elsewhere (merged per
+   component), push waiting changes, upload waiting photos. Without signal: nothing is lost,
+   the queue waits on the phone.
+   ========================================================================= */
+function blobToB64(blob) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob); }); }
+function b64ToBlob(b64, type = 'image/jpeg') { const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type }); }
+const stamp = x => x ? (x.updatedAt || x.takenAt || '') : '';
+function mergeMap(a = {}, b = {}) { const o = { ...a }; for (const k in b) { const x = a[k], y = b[k]; if (y && (!x || stamp(y) > stamp(x))) o[k] = y; } return o; }
+function mergeInspection(L, R) {
+  const newer = (R.updatedAt || '') > (L.updatedAt || '') ? R : L, older = newer === R ? L : R;
+  return { ...older, ...newer, items: mergeMap(L.items, R.items), photos: mergeMap(L.photos, R.photos) };
+}
+const Sync = {
+  busy: false, lastOk: lsGet('bsi-last-sync', null), lastErr: null, timer: null, inflight: {},
+  get url() { return String(lsGet('bsi-sync-url', '') || (window.BSI_CONFIG && window.BSI_CONFIG.syncUrl) || '').trim(); },
+  async post(body) {
+    let r;
+    try { r = await fetch(this.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' }); }
+    catch { throw new Error('Could not reach the sync server.'); }
+    if (!r.ok) throw new Error('Sync server answered ' + r.status + '.');
+    let j; try { j = await r.json(); } catch { throw new Error('Unexpected answer. Check the sync address and that the web app is shared with "Anyone".'); }
+    if (!j.ok) throw new Error(j.error || 'Sync server error.');
+    return j;
+  },
+  soon(ms = 6000) { clearTimeout(this.timer); this.timer = setTimeout(() => this.run(), ms); },
+  async run(manual) {
+    if (!this.url) { if (manual) toast('Add the sync address first (Data → Online sync).'); return; }
+    if (!navigator.onLine) { if (manual) toast('No signal. Changes stay on this phone and sync when signal returns.'); Store.status(); return; }
+    if (this.busy) return;
+    this.busy = true; Store.status();
+    let changed = false;
+    try {
+      // 1. Pull changes made on other devices.
+      const since = (await IDB.get('meta', 'cursor')) || 0;
+      const p = await this.post({ op: 'pull', since });
+      for (const rec of p.records || []) changed = (await this.applyRemote(rec)) || changed;
+      await IDB.put('meta', 'cursor', p.cursor || since);
+      // 2. Push bridges and inspections waiting on this phone.
+      const keys = await IDB.keys('outbox');
+      const recKeys = keys.filter(k => k.startsWith('bridges/') || k.startsWith('inspections/'));
+      for (let i = 0; i < recKeys.length; i += 15) {
+        const batch = [];
+        for (const k of recKeys.slice(i, i + 15)) {
+          const [col, id] = [k.slice(0, k.indexOf('/')), k.slice(k.indexOf('/') + 1)], v = await IDB.get(col, id);
+          if (!v) { await IDB.del('outbox', k); continue; }
+          batch.push({ key: k, col, id, updated_at: v.updatedAt || now(), deleted: !!v._deleted, data: v._deleted ? null : v });
+        }
+        if (!batch.length) continue;
+        const res = await this.post({ op: 'push', records: batch.map(({ key, ...r }) => r) });
+        for (const b of batch) { const cur = await IDB.get(b.col, b.id); if ((res.accepted || []).includes(b.key) && (cur?.updatedAt || '') === b.updated_at) await IDB.del('outbox', b.key); }
+        if ((res.stale || []).length) this.soon(1500);
+      }
+      // 3. Upload waiting photos (named by component, one Drive folder per inspection).
+      for (const k of keys.filter(k => k.startsWith('photo/'))) {
+        const id = k.slice(6), inspId = await IDB.get('outbox', k), r = await IDB.get('photos', id);
+        if (!r) { await IDB.del('outbox', k); continue; }
+        const insp = Store.get('inspections', inspId), b = insp && Store.get('bridges', insp.bridgeId), names = insp && b ? photoNames(insp, b) : {};
+        await this.post({ op: 'photo', id, inspection_id: inspId || '', file_name: (names[id] || id) + '.jpg', folder: insp && b ? pkgName(insp, b) : 'Unsorted', b64: await blobToB64(await fitPhoto(r.blob, UPLOAD_MAX_BYTES)) });
+        await IDB.del('outbox', k);
+      }
+      for (const k of keys.filter(k => k.startsWith('photodel/'))) { await this.post({ op: 'photoDel', id: k.slice(9) }); await IDB.del('outbox', k); }
+      this.lastOk = now(); lsSet('bsi-last-sync', this.lastOk); this.lastErr = null;
+      if (manual) toast('Synced.');
+    } catch (e) {
+      this.lastErr = e.message || String(e);
+      if (manual) toast('Sync failed: ' + this.lastErr);
+    } finally {
+      this.busy = false;
+      await Store.recount(); Store.status();
+      if (changed) onRemoteChange(); else if (S.route.name === 'data') render();
+    }
+  },
+  async applyRemote(rec) {
+    const { col, id } = rec; if (col !== 'bridges' && col !== 'inspections') return false;
+    const key = `${col}/${id}`, local = await IDB.get(col, id), dirty = !!(await IDB.get('outbox', key));
+    if (rec.deleted) {
+      if (!local || local._deleted) return false;
+      if (dirty && (local.updatedAt || '') > rec.updated_at) return false;
+      await Store.local(col, id, { _deleted: true, updatedAt: rec.updated_at }); await IDB.del('outbox', key); return true;
+    }
+    const remote = { ...rec.data, updatedAt: rec.updated_at };
+    if (!local || !dirty) {
+      if (local && JSON.stringify(local) === JSON.stringify(remote)) return false;
+      await Store.local(col, id, remote); return true;
+    }
+    if (local._deleted) return false;
+    if (col === 'bridges') {
+      if (rec.updated_at > (local.updatedAt || '')) { await Store.local(col, id, remote); await IDB.del('outbox', key); return true; }
+      return false;
+    }
+    // Inspection changed here and elsewhere: keep both, component by component; upload the result.
+    await Store.local(col, id, { ...mergeInspection(local, remote), updatedAt: now() });
+    return true;
+  },
+  fetchPhoto(id) {
+    if (!this.url || !navigator.onLine) return Promise.resolve(null);
+    if (this.inflight[id]) return this.inflight[id];
+    return this.inflight[id] = this.post({ op: 'getPhoto', id })
+      .then(async j => { const blob = b64ToBlob(j.b64); await IDB.put('photos', id, { blob, at: now(), fromServer: true }); return blob; })
+      .catch(() => null)
+      .finally(() => setTimeout(() => { delete this.inflight[id]; }, 30000));
+  },
+  // After a restore or a new sync address: queue everything on this phone for upload.
+  async queueAll() {
+    for (const col of ['bridges', 'inspections']) for (const id of Object.keys(Store.cache[col])) await IDB.put('outbox', `${col}/${id}`, 1);
+    for (const insp of Store.all('inspections')) for (const p of photosOf(insp)) if (await IDB.get('photos', p.id)) await IDB.put('outbox', 'photo/' + p.id, insp.id);
+    await Store.recount(); Store.status();
+  },
+};
+window.addEventListener('online', () => { Store.status(); Sync.soon(500); });
+window.addEventListener('offline', () => Store.status());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) Sync.soon(1000); });
+setInterval(() => { if (!document.hidden) Sync.run(); }, 90000);
+function onRemoteChange() {
+  if (['home', 'bridge', 'checklist', 'review', 'data'].includes(S.route.name) && !document.activeElement?.matches('input,textarea,select')) render();
+}
+
+/* =========================================================================
+   State, routing, helpers
+   ========================================================================= */
+const S = { hIdx: 0, newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
+function nav(route, replace) {
+  if (!replace) { S.stack.push(S.route); S.hIdx++; try { history.pushState({ idx: S.hIdx }, ''); } catch {} }
+  S.route = route; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0);
+}
+/* Leaving a component (Done or Back): hand its new camera photos to the phone in one go.
+   iPhone: the tap that leaves the screen opens the share sheet; iPhone asks once ("Save Images"),
+   because web apps are never allowed to save to Photos silently.
+   Android: the photos are saved straight to Downloads, which Gallery and Google Photos show. */
+function savePendingToPhotos() {
+  const list = S.newPhotos; S.newPhotos = [];
+  if (!list.length || !lsGet('bsi-camroll', true)) return;
+  const insp = Store.get('inspections', list[0].inspId), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
+  const names = photoNames(insp, b), keep = list.filter(x => insp.photos?.[x.id] && !insp.photos[x.id].deleted);
+  const files = keep.map(x => new File([x.blob], (names[x.id] || x.id) + '.jpg', { type: 'image/jpeg' }));
+  if (!files.length) return;
+  if (isAndroid()) { saveImagesToDevice(files); return; }
+  if (!canShareFiles(files)) return;
+  navigator.share({ files }).then(() => toast(`${files.length} photo${files.length > 1 ? 's' : ''} sent to iPhone.`)).catch(() => {});
+}
+function leaveComponent() { if (S.route.name === 'component') { flushDraft(); savePendingToPhotos(); } }
+// In-app Back and Done: leave the screen during the tap, then step back through browser history,
+// so the Android back gesture/button and the app's own Back always agree.
+function back() { leaveComponent(); if (S.hIdx > 0) history.back(); else appBack(); }
+function appBack() { S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
+window.addEventListener('popstate', e => {
+  if (!$('#lightbox').hidden) lbClose();
+  // Each app screen is one history entry, so the Android back gesture/button steps back one screen.
+  const idx = e.state?.idx || 0;
+  if (idx >= S.hIdx) { S.hIdx = idx; return; }   // a forward step (rare on phones) is ignored
+  leaveComponent();
+  while (S.hIdx > idx) { S.route = S.stack.pop() || { name: 'home' }; S.hIdx--; }
+  S.confirm = null; S.draft = null; render();
+});
+try { history.replaceState({ idx: 0 }, ''); } catch {}
+
+function inspectionsFor(bridgeId) { return Store.all('inspections').filter(i => i.bridgeId === bridgeId).sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || '')); }
+const itemsOf = insp => insp.items || {};
+function photosOf(insp, cid) { const all = live(insp.photos).map(([id, p]) => ({ id, ...p })); return cid ? all.filter(p => p.componentId === cid) : all; }
+function statusOf(it, nPhotos) {
+  it = it || {};
+  if (it.na) return { label: 'N/A', cls: 'b-na', done: true };
+  if ((it.defects || []).length) return { label: `${it.defects.length} defect${it.defects.length > 1 ? 's' : ''}`, cls: 'b-def', done: true, def: true };
+  if (it.none) return { label: 'No defects', cls: 'b-ok', done: true };
+  if (it.comment || nPhotos) return { label: 'Noted', cls: 'b-note', done: true };
+  return { label: 'Inspect', cls: 'b-todo', done: false };
+}
+function photoCounts(insp) { const pc = {}; photosOf(insp).forEach(p => pc[p.componentId] = (pc[p.componentId] || 0) + 1); return pc; }
+function tally(insp, b) {
+  const t = { done: 0, def: 0, ok: 0, na: 0, total: b.components.length, photos: photosOf(insp).length }, pc = photoCounts(insp);
+  b.components.forEach(c => { const s = statusOf(itemsOf(insp)[c.id], pc[c.id]); if (s.done) t.done++; if (s.def) t.def++; if (s.cls === 'b-ok') t.ok++; if (s.cls === 'b-na') t.na++; });
+  return t;
+}
+function photoNames(insp, b) {
+  const compBy = Object.fromEntries(b.components.map(c => [c.id, c])), seen = {}, out = {};
+  photosOf(insp).sort((x, y) => String(x.takenAt).localeCompare(String(y.takenAt))).forEach(p => {
+    const c = compBy[p.componentId], base = c ? (c.ph || c.code.replace(/[^A-Za-z0-9]+/g, '_')) : 'Photo';
+    seen[base] = (seen[base] || 0) + 1;
+    out[p.id] = seen[base] === 1 ? base : `${base}_${seen[base]}`;
+  });
+  return out;
+}
+const pkgName = (insp, b) => `${TEMPLATES[typeOf(b)].name.split(' ')[0]}-${String(b.bridgeNo).replace(/[^A-Za-z0-9-]+/g, '')}_L${insp.level}_${(insp.startedAt || '').slice(0, 10)}`;
+
+/* ---------- GPS (works offline: the phone's GPS needs no signal) ---------- */
+function getFix(timeout = 10000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p => res({ lat: +p.coords.latitude.toFixed(6), lng: +p.coords.longitude.toFixed(6), acc: Math.round(p.coords.accuracy) }),
+      () => res(null), { enableHighAccuracy: true, timeout, maximumAge: 60000 });
+  });
+}
+
+/* =========================================================================
+   Views
+   ========================================================================= */
+function setBar(title, backLabel) { $('#title').textContent = title; $('#back').hidden = !backLabel; $('#back-l').textContent = backLabel || ''; }
+function render() {
+  const r = S.route, v = $('#view');
+  try {
+    const tabbed = ['home', 'inspections', 'photos', 'photofolder', 'data'].includes(r.name);
+    document.body.classList.toggle('home', r.name === 'home');
+    document.body.classList.toggle('wide', r.name === 'layout');
+    document.body.classList.toggle('has-tabs', tabbed);
+    $('#tabs').hidden = !tabbed;
+    document.querySelectorAll('#tabs [data-act="tab"]').forEach(t => { if (t.dataset.v === (r.name === 'photofolder' ? 'photos' : r.name)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
+    if (r.name === 'home') v.innerHTML = viewHome();
+    else if (r.name === 'inspections') v.innerHTML = viewInspections();
+    else if (r.name === 'photos') v.innerHTML = viewPhotos();
+    else if (r.name === 'photofolder') v.innerHTML = viewPhotoFolder(r.id);
+    else if (r.name === 'data') v.innerHTML = viewData();
+    else if (r.name === 'add') v.innerHTML = viewAdd();
+    else if (r.name === 'bridge') v.innerHTML = viewBridge(r.id);
+    else if (r.name === 'checklist') v.innerHTML = viewChecklist(r.id);
+    else if (r.name === 'component') v.innerHTML = viewComponent(r.id, r.cid);
+    else if (r.name === 'review') v.innerHTML = viewReview(r.id);
+    else if (r.name === 'layout') { v.innerHTML = viewLayout(r.id); prAfter(); }
+    v.insertAdjacentHTML('beforeend', '<p class="credit">Developed by NS</p>');
+  } catch (e) { console.error(e); v.innerHTML = `<div class="card warn"><b>Something went wrong showing this screen.</b><span class="sub">${esc(e.message)}</span><button class="btn out" data-act="home">Back to start</button></div>`; }
+  if (S.lastCid && (r.name === 'checklist' || r.name === 'review')) {
+    const row = v.querySelector(`[data-act="open-comp"][data-cid="${CSS.escape(S.lastCid)}"]`);
+    if (row) { row.classList.add('just'); row.scrollIntoView({ block: 'center' }); setTimeout(() => row.classList.remove('just'), 1600); }
+    S.lastCid = null;
+  }
+}
+const gone = () => { setBar('Not found', 'Back'); return '<div class="card"><b>This record no longer exists.</b><button class="btn out" data-act="home">Back to start</button></div>'; };
+
+/* ---------- Home ---------- */
+const DAY = 864e5;
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const touched = i => [i.startedAt, i.completedAt, i.updatedAt].filter(Boolean).map(x => new Date(x));
+function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+function initials(n) { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() : '?'; }
+const tIcon = (t, size = 'md') => `<span class="ticon t-${t}"${size === 'sm' ? ' style="width:40px;height:40px"' : ''}>${typeIcon(t, size === 'sm' ? 26 : 32, size === 'sm' ? 16 : 20)}</span>`;
+const typeShort = b => TEMPLATES[typeOf(b)].name.replace(' bridge', '');
+const bridgeTitle = b => [b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(' · ') || `${typeShort(b)} ${b.bridgeNo}`;
+
+function viewHome() {
+  setBar('Bridge Site Inspection');
+  const install = isStandalone() ? '' : `<div class="card warn"><b>Install on this phone to work with no signal</b>
+    <span class="sub" style="color:var(--ink)">${isIOS() ? 'In Safari tap <b>Share</b> → <b>Add to Home Screen</b>, then open the app from its icon.' : installEvt ? 'Tap <b>Install app</b>, then open the app from its icon.' : 'In Chrome tap <b>⋮</b> → <b>Install app</b>, then open the app from its icon.'}</span>
+    ${installEvt ? '<button class="btn yellow sm" data-act="install">Install app</button>' : ''}</div>`;
+
+
+  return `
+  <div class="hello"><h2 class="hero grow">Bridge site inspection</h2></div>
+  <div class="card syncbox" id="syncbox" role="status">${syncBoxHtml()}</div>
+  ${install}
+  <label class="search"><span class="sr">Search bridges</span><input id="q" type="search" placeholder="Search bridge No., project, road or SLK" value="${esc(S.q)}" data-in="q" autocomplete="off">${ICON.search}</label>
+
+  <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">${Store.all('bridges').length} on this device</span></div>
+    <div class="chips" role="group" aria-label="Filter by type">
+      <button class="cat" aria-pressed="${S.ft === 'all'}" data-act="ft" data-v="all" style="padding-left:18px">All</button>
+      ${Object.keys(TEMPLATES).map(k => `<button class="cat" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}"><span class="ci t-${k}">${typeIcon(k, 24, 15)}</span>${esc(TEMPLATES[k].name.replace(' bridge', ''))}</button>`).join('')}</div>
+    <div id="blist" class="sec">${bridgeList()}</div></div>
+
+  <button class="pr-cta desk-only" data-act="open-layout">
+    <span class="pr-cta-ic" aria-hidden="true">${ICON.doc}</span>
+    <span class="pr-cta-tx"><b>Picture report for Word</b><span>Arrange photos on A4 pages · two per page · numbered captions</span></span>
+    <span class="pr-cta-go">Open ${ICON.chev}</span>
+  </button>`;
+}
+function syncBoxHtml() {
+  const on = navigator.onLine, n = Store.dirty || 0, url = Sync.url;
+  const plural = (k, w) => `${k} ${w}${k === 1 ? '' : 's'}`;
+  const waiting = n ? [Store.qRec ? plural(Store.qRec, 'record') : '', Store.qPhotos ? plural(Store.qPhotos, 'photo') : ''].filter(Boolean).join(' and ') + ' waiting to sync' : '';
+  let cls, title, sub;
+  if (!on) { cls = 'off'; title = 'Offline'; sub = n ? `${waiting} · saved on this phone` : 'Everything is saved on this phone'; }
+  else if (!url) { cls = 'off'; title = 'Online sync not set up'; sub = 'Saved on this phone only (Data → Online sync)'; }
+  else if (Sync.busy) { cls = 'busy'; title = 'Syncing…'; sub = n ? waiting : 'Checking for updates'; }
+  else if (Sync.lastErr) { cls = 'err'; title = 'Online · sync problem'; sub = (n ? waiting + ' · ' : '') + Sync.lastErr; }
+  else if (n) { cls = 'wait'; title = 'Online'; sub = waiting; }
+  else { cls = 'ok'; title = 'Online · all synced'; sub = Sync.lastOk ? 'Last synced ' + new Date(Sync.lastOk).toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Up to date'; }
+  return `<span class="sdot ${cls}" aria-hidden="true"></span><span class="grow"><b>${esc(title)}</b><br><span class="sub">${esc(sub)}</span></span>
+    ${url && on ? `<button class="btn sm ${n ? 'yellow' : 'out'}" data-act="sync-now" ${Sync.busy ? 'disabled' : ''}>${ICON.sync} Sync</button>` : ''}`;
+}
+function typeTiles() {
+  return `<div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
+    <button class="tile t-${k}" data-act="new" data-type="${k}" aria-label="Set up a new ${esc(t.name.toLowerCase())}">${tIcon(k)}<b>${esc(t.name)}</b></button>`).join('')}</div>`;
+}
+function inspRow(i) {
+  const b = Store.get('bridges', i.bridgeId); if (!b) return '';
+  const t = tally(i, b), done = i.status === 'complete';
+  return `<button class="brow" data-act="${done ? 'open-review' : 'open-insp'}" data-id="${esc(i.id)}">
+    ${tIcon(typeOf(b))}
+    <span class="grow"><b style="font-size:16px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${esc(LEVELS[i.level])} · ${done ? '<span class="st-done">Completed</span>' : `<span class="st-todo">${t.done}/${t.total} inspected</span>`}</span>
+      <br><span class="when">${ICON.cal} ${fmtDate(i.completedAt || i.startedAt)} · ${t.def} defect${t.def === 1 ? '' : 's'} · ${t.photos} photo${t.photos === 1 ? '' : 's'}</span></span>
+    <span class="icb ${done ? 'soft' : 'yellow'}" aria-hidden="true">${done ? ICON.doc : ICON.play}</span></button>`;
+}
+function bridgeList() {
+  const t = S.q.trim().toLowerCase();
+  const rows = Store.all('bridges').filter(b => (S.ft === 'all' || typeOf(b) === S.ft) && (!t || [b.bridgeNo, b.project, b.road, b.slk, b.region].some(x => String(x || '').toLowerCase().includes(t))))
+    .sort((a, b) => String(a.bridgeNo).localeCompare(String(b.bridgeNo), 'en', { numeric: true }));
+  if (!rows.length) return t || S.ft !== 'all' ? '<span class="sub">No bridge matches this search.</span>'
+    : '<div class="card"><b>No bridges yet</b><span class="sub">Tap <b>+</b> at the bottom to set up a bridge. Or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
+  return rows.map(b => {
+    const list = inspectionsFor(b.id), active = list.find(i => i.status !== 'complete'), last = list.find(i => i.status === 'complete');
+    const tl = active ? tally(active, b) : null;
+    const when = active ? `Inspection ${fmtDate(active.startedAt)} · L${active.level} ${tl.done}/${tl.total}` : last ? `Inspected ${fmtDate(last.completedAt)}` : 'Not inspected yet';
+    return `<button class="brow" data-act="open-bridge" data-id="${esc(b.id)}">
+      ${tIcon(typeOf(b))}
+      <span class="grow"><b style="font-size:16px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? `<b style="color:var(--ink)">Project ${esc(b.project)}</b> · ` : ''}${esc(bridgeTitle(b))}${b.sample ? ' · sample' : ''}</span>
+        <br><span class="when" ${active ? 'style="background:var(--hi);color:var(--hi-ink);font-weight:700"' : ''}>${ICON.cal} ${esc(when)}</span></span>
+      <span class="icb ${active ? 'yellow' : 'soft'}" aria-hidden="true">${ICON.chev}</span></button>`;
+  }).join('');
+}
+
+/* ---------- Inspections tab ---------- */
+function viewInspections() {
+  setBar('');
+  const all = Store.all('inspections').filter(i => Store.get('bridges', i.bridgeId)).sort((a, b) => (b.updatedAt || b.startedAt || '').localeCompare(a.updatedAt || a.startedAt || ''));
+  const act = all.filter(i => i.status !== 'complete'), done = all.filter(i => i.status === 'complete');
+  return `<h2 class="big">Inspections</h2>
+  <div class="sec"><div class="sec-h"><h3>In progress</h3><span class="sub">${act.length}</span></div>${act.map(inspRow).join('') || '<span class="sub">None in progress. Open a bridge and tap Start inspection.</span>'}</div>
+  <div class="sec"><div class="sec-h"><h3>Completed</h3><span class="sub">${done.length}</span></div>${done.map(inspRow).join('') || '<span class="sub">No completed inspections yet.</span>'}</div>`;
+}
+
+/* ---------- Photos tab: one folder per bridge ---------- */
+function photoSync(id) {
+  if ((Store.pendPhotos || new Set()).has(id)) return { cls: 'wait', label: navigator.onLine ? 'Waiting to sync' : 'Offline · waiting to sync' };
+  if (Sync.url) return { cls: 'ok', label: 'Synced to Google Drive' };
+  return { cls: 'off', label: 'On this phone only' };
+}
+function bridgePhotos(bridgeId) {
+  const b = Store.get('bridges', bridgeId); if (!b) return [];
+  const out = [];
+  inspectionsFor(bridgeId).forEach(i => {
+    const names = photoNames(i, b), compBy = Object.fromEntries(b.components.map(c => [c.id, c]));
+    orderedPhotos(i, b).forEach(p => out.push({ id: p.id, insp: i, cid: p.componentId, comp: compBy[p.componentId], name: names[p.id], takenAt: p.takenAt }));
+  });
+  return out;
+}
+function syncPill(list) {
+  const pend = list.filter(x => photoSync(x.id).cls === 'wait').length;
+  if (pend) return `<span class="spill wait">${ICON.clock} ${pend} waiting</span>`;
+  if (Sync.url) return `<span class="spill ok">${ICON.check} All synced</span>`;
+  return `<span class="spill off">On this phone</span>`;
+}
+function viewPhotos() {
+  setBar('');
+  const folders = Store.all('bridges').map(b => ({ b, list: bridgePhotos(b.id) })).filter(f => f.list.length)
+    .sort((x, y) => String(y.list[y.list.length - 1].takenAt).localeCompare(String(x.list[x.list.length - 1].takenAt)));
+  if (!folders.length) return '<h2 class="big">Photos</h2><div class="card"><b>No photos yet</b><span class="sub">Photos you take during inspections appear here, in one folder per bridge.</span></div>';
+  const total = folders.reduce((a, f) => a + f.list.length, 0);
+  return `<div class="row between"><h2 class="big">Photos</h2><span class="sub">${total} photo${total === 1 ? '' : 's'} · ${folders.length} bridge${folders.length === 1 ? '' : 's'}</span></div>
+  <div class="folders">${folders.map(({ b, list }) => {
+    const thumbs = list.slice(-4).reverse();
+    return `<button class="folder" data-act="folder" data-id="${esc(b.id)}" aria-label="Open photos of ${esc(typeShort(b))} ${esc(b.bridgeNo)}">
+      <span class="mosaic">${[0, 1, 2, 3].map(k => thumbs[k] ? `<img alt="" src="${esc(Store.photoSrc(thumbs[k].id))}" data-pid="${esc(thumbs[k].id)}">` : '<span></span>').join('')}</span>
+      <span class="ftitle"><span class="fic t-${typeOf(b)}">${ICON.folder}</span><span class="grow"><b>${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${list.length} photo${list.length === 1 ? '' : 's'}</span></span></span>
+      ${syncPill(list)}</button>`;
+  }).join('')}</div>`;
+}
+function viewPhotoFolder(bridgeId) {
+  const b = Store.get('bridges', bridgeId); if (!b) return gone();
+  setBar(`${typeShort(b)} ${b.bridgeNo} · photos`, 'Photos');
+  const list = bridgePhotos(bridgeId); S.lb = { list, i: 0 };
+  if (!list.length) return '<div class="card"><b>No photos for this bridge yet.</b></div>';
+  const byInsp = {};
+  list.forEach((x, k) => (byInsp[x.insp.id] = byInsp[x.insp.id] || { insp: x.insp, items: [] }).items.push({ ...x, k }));
+  return `<div class="row" style="gap:12px">${tIcon(typeOf(b))}<div class="grow"><b style="font-size:18px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${esc(bridgeTitle(b))}</span></div>${syncPill(list)}</div>
+  ${Object.values(byInsp).map(({ insp, items }) => `<div class="sec"><div class="sec-h"><h3>${esc(LEVELS[insp.level])}</h3><span class="sub">${fmtDate(insp.startedAt)} · ${items.length}</span><button class="more" data-act="open-layout" data-id="${esc(insp.id)}">Picture report</button></div>
+    <div class="photos">${items.map(x => { const st = photoSync(x.id);
+      return `<button class="ph" data-act="lb-open" data-k="${x.k}" aria-label="${esc(x.name)}, ${esc(st.label)}"><img alt="" src="${esc(Store.photoSrc(x.id))}" data-pid="${esc(x.id)}">
+        <span class="psync ${st.cls}" aria-hidden="true">${st.cls === 'wait' ? ICON.clock : st.cls === 'ok' ? ICON.check : ICON.phone}</span><span class="pname">${esc(x.name)}.jpg</span></button>`; }).join('')}</div></div>`).join('')}`;
+}
+
+/* ---------- Full-screen photo viewer ---------- */
+let lbX = null;
+document.addEventListener('touchstart', e => { if (e.target.closest('#lightbox .lb-img')) lbX = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => { if (lbX == null) return; const dx = e.changedTouches[0].clientX - lbX; lbX = null; if (Math.abs(dx) > 50) A[dx < 0 ? 'lb-next' : 'lb-prev'](); }, { passive: true });
+function lbRender() {
+  const lb = $('#lightbox'), L = S.lb; if (!L || !L.list.length) return;
+  const x = L.list[L.i], st = photoSync(x.id), it = x.comp ? itemsOf(x.insp)[x.comp.id] || {} : {};
+  lb.innerHTML = `<div class="lb-top"><span class="lb-count">${L.i + 1} / ${L.list.length}</span><button class="lb-btn" data-act="lb-close" aria-label="Close">${ICON.x}</button></div>
+    <div class="lb-img"><img alt="${esc(x.name)}" src="${esc(Store.photoSrc(x.id))}" data-pid="${esc(x.id)}"></div>
+    <div class="lb-info">
+      <div class="row between"><b class="mono">${esc(x.name)}.jpg</b><span class="spill ${st.cls}">${st.cls === 'wait' ? ICON.clock : st.cls === 'ok' ? ICON.check : ''} ${esc(st.label)}</span></div>
+      <span>${x.comp ? esc([locFull(x.comp.loc), compFull(x.comp)].filter(Boolean).join(' ')) : ''}${findingOf(it) ? ' · ' + esc(findingOf(it)) : ''}</span>
+      ${it.comment ? `<span class="lb-sub">${esc(it.comment)}</span>` : ''}
+      <span class="lb-sub">${x.takenAt ? new Date(x.takenAt).toLocaleString('en-AU') : ''}</span>
+      <div class="row"><button class="lb-btn" data-act="lb-prev" aria-label="Previous photo" ${L.i ? '' : 'disabled'}>${ICON.left}</button>
+        <button class="btn yellow sm grow" data-act="lb-comp">Open component</button>
+        <button class="lb-btn" data-act="lb-next" aria-label="Next photo" ${L.i < L.list.length - 1 ? '' : 'disabled'}>${ICON.chev}</button></div>
+    </div>`;
+  lb.hidden = false;
+}
+function lbClose() { $('#lightbox').hidden = true; $('#lightbox').innerHTML = ''; }
+
+/* ---------- New bridge picker (from the + button) ---------- */
+function openNewSheet() {
+  const sh = $('#sheet');
+  sh.innerHTML = `<div class="sheet-in"><div class="row between"><b style="font-size:18px">Set up a new bridge</b><button class="icb soft" data-act="sheet-close" aria-label="Close">×</button></div>${typeTiles()}</div>`;
+  sh.hidden = false;
+}
+
+/* ---------- Data, backup, restore ---------- */
+function viewData() {
+  setBar('');
+  const nb = Store.all('bridges').length, ni = Store.all('inspections').length, np = Store.all('inspections').reduce((a, i) => a + photosOf(i).length, 0);
+  const gps = lsGet('bsi-gps', true);
+  setTimeout(async () => { try { const e = await navigator.storage?.estimate?.(); const el = $('#usage'); if (e && el) el.textContent = `${fmtSize(e.usage || 0)} used${e.quota ? ' of about ' + fmtSize(e.quota) + ' available' : ''}`; } catch {} }, 0);
+  const r = S.restore;
+  return `
+  <h2 class="big">Data &amp; backup</h2>
+  <div class="facts"><div><span class="sub">Bridges</span><b>${nb}</b></div><div><span class="sub">Inspections</span><b>${ni}</b></div><div><span class="sub">Photos</span><b>${np}</b></div></div>
+  <div class="card"><b>Stored on this device only</b>
+    <span class="sub" id="usage">Checking storage…</span>
+    <span class="sub">${Store.persisted ? 'Protected: the phone will not clear this data on its own.' : 'Not yet protected from automatic clean-up. Install the app on the home screen and open it from the icon.'} Export each inspection when finished, and back up regularly.</span></div>
+  <div class="sec"><div class="sec-h"><h3>Online sync · Google Drive</h3></div>
+    <div class="card">
+      <b>${!Sync.url ? 'Not set up' : Sync.busy ? 'Syncing…' : Sync.lastErr ? 'Last sync failed' : Sync.lastOk ? 'Last synced ' + new Date(Sync.lastOk).toLocaleString('en-AU') : 'Not synced yet'}</b>
+      <span class="sub">${Store.dirty ? `${Store.dirty} change${Store.dirty > 1 ? 's' : ''} or photo${Store.dirty > 1 ? 's' : ''} waiting on this phone` : 'Nothing waiting on this phone'}${navigator.onLine ? '' : ' · no signal now'}</span>
+      ${Sync.lastErr ? `<span class="sub" style="color:var(--danger)">${esc(Sync.lastErr)}</span>` : ''}
+      <label class="f"><span>Sync address (Google Apps Script web app URL)</span><input class="in mono" id="sync-url" value="${esc(Sync.url)}" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <div class="row wrap"><button class="btn out sm" data-act="sync-save">Save address</button><button class="btn sm" data-act="sync-now" ${Sync.url ? '' : 'disabled'}>Sync now</button></div>
+      <span class="sub">Everything is saved on this phone first. With signal, changes and photos go to the Google Sheet and Drive, and corrections made on other devices come back here (merged component by component). Photos go to Drive → Bridge Inspection → Photos → one folder per inspection. Anyone who has this address can read and change the online data.</span>
+    </div></div>
+  <div class="sec"><div class="sec-h"><h3>Backup</h3></div>
+    <button class="btn block" data-act="backup">Back up everything (ZIP)</button>
+    <span class="sub">One file with every bridge, inspection and photo. Save it to Files, OneDrive or SharePoint. Use it to move to a new phone or recover data.</span>
+    <button class="btn out block" data-act="restore-pick">Restore from a backup</button>
+    ${r ? `<div class="confirm"><span class="grow">${r.error ? esc(r.error) : `Backup from ${esc(fmtDate(r.data.exportedAt))}: ${Object.keys(r.data.bridges || {}).length} bridges, ${Object.keys(r.data.inspections || {}).length} inspections, ${r.photos} photos. Records with the same ID on this phone will be replaced.`}</span>
+      <button class="btn sm ghost" data-act="restore-cancel">Cancel</button>${r.error ? '' : '<button class="btn sm" data-act="restore-apply">Restore</button>'}</div>` : ''}</div>
+  <div class="sec"><div class="sec-h"><h3>Settings</h3></div>
+    <button class="chip" aria-pressed="${gps}" data-act="gps-toggle">Tag photos with GPS location</button>
+    <span class="sub">The phone's GPS works without mobile signal. Locations go into the picture index.</span>
+    <button class="chip" aria-pressed="${lsGet('bsi-camroll', true)}" data-act="camroll-toggle">${isAndroid() ? 'Save new photos to the phone gallery when I tap Done' : 'Copy new photos to iPhone Photos when I tap Done'}</button>
+    <span class="sub">${isAndroid() ? 'No questions while you take photos. When you tap <b>Done</b>, the new photos of that component are saved to <b>Downloads</b>, which Gallery and Google Photos show (the first time Chrome may ask to allow several downloads).' : 'No questions while you take photos. When you tap <b>Done</b>, the new photos of that component are handed to iPhone together; tap <b>Save Images</b> once.'} Photos are always kept inside this app either way.</span></div>
+  <div class="sec"><div class="sec-h"><h3>Using it offline</h3></div>
+    <span class="sub">Open the app once with signal after each update. From then on it opens and works with no signal. Voice: tap Speak, then the microphone on your keyboard (iPhone dictation works offline on recent iPhones; older ones need signal).</span></div>`;
+}
+
+/* ---------- Set up bridge ---------- */
+function newForm(type) {
+  const T = TEMPLATES[type], f = { type, project: '', bridgeNo: '', road: '', slk: '', region: '' };
+  T.params.forEach(([k, , , , d]) => f[k] = d); T.choices.forEach(([k, , opts]) => f[k] = opts[0][0]);
+  return f;
+}
+function viewAdd() {
+  const f = S.form, T = TEMPLATES[f.type];
+  setBar('Set up ' + T.name.toLowerCase(), 'Start');
+  const comps = generateComponents(f.type, f), locs = [...new Set(comps.filter(c => c.loc !== 'GEN').map(c => c.loc))];
+  const stepper = ([k, label, min, max]) => `<div class="step"><span class="l">${label}</span>
+    <button data-act="step" data-k="${k}" data-d="-1" data-min="${min}" data-max="${max}" aria-label="Decrease ${label}">−</button><b>${f[k]}</b>
+    <button data-act="step" data-k="${k}" data-d="1" data-min="${min}" data-max="${max}" aria-label="Increase ${label}">+</button></div>`;
+  const locSeq = locs.length > 9 ? [...locs.slice(0, 4), '…', ...locs.slice(-3)] : locs;
+  return `
+  <div class="row" style="gap:12px">${tIcon(f.type)}<h2 class="big">${esc(T.name)}</h2></div>
+  <div class="sec"><div class="sec-h"><h3>Identification</h3></div>
+    <div class="row wrap" style="align-items:flex-start">
+      <label class="f" style="min-width:150px"><span>Bridge / structure No.</span><input class="in" id="f-bridgeNo" data-in="form" data-k="bridgeNo" value="${esc(f.bridgeNo)}" placeholder="e.g. 0412" autocapitalize="characters"></label>
+      <label class="f" style="min-width:150px"><span>Project number</span><input class="in" id="f-project" data-in="form" data-k="project" value="${esc(f.project || '')}" placeholder="e.g. P-2026-014" autocapitalize="characters"></label></div>
+    <div class="row wrap" style="align-items:flex-start">
+      <label class="f" style="min-width:200px"><span>Road</span><input class="in" id="f-road" data-in="form" data-k="road" value="${esc(f.road)}" placeholder="Road name"></label>
+      <label class="f" style="max-width:140px"><span>SLK</span><input class="in" id="f-slk" data-in="form" data-k="slk" value="${esc(f.slk)}" inputmode="decimal" placeholder="0.00"></label></div>
+    <label class="f"><span>Region</span><input class="in" id="f-region" data-in="form" data-k="region" value="${esc(f.region)}" placeholder="Region"></label>
+  </div>
+  <div class="sec"><div class="sec-h"><h3>Layout · numbered in the direction of increasing SLK</h3></div>
+    <div class="card" style="gap:0">${T.params.map(stepper).join('')}</div>
+    ${T.choices.map(([k, label, opts]) => `<span class="sub">${label}</span><div class="seg" role="group" aria-label="${esc(label)}">${opts.map(([v, l]) => `<button aria-pressed="${f[k] === v}" data-act="form-set" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join('')}</div>`).join('')}
+  </div>
+  <div class="card"><b>${comps.length} components will be created</b><span class="sub">${['General', ...locSeq.map(l => l === '…' ? '…' : locLabel(l))].join(' → ')}</span>
+    <span class="sub">Photos are named by component, e.g. ${esc(comps.filter(c => c.loc !== 'GEN').slice(0, 3).map(c => c.ph + '.jpg').join(', '))}.</span></div>
+  <button class="btn block" data-act="save-bridge">Save ${esc(T.name.toLowerCase())}</button>`;
+}
+
+/* ---------- Bridge ---------- */
+function viewBridge(id) {
+  const b = Store.get('bridges', id); if (!b) return gone();
+  const T = TEMPLATES[typeOf(b)];
+  setBar(`${T.name.replace(' bridge', '')} ${b.bridgeNo}`, 'Start');
+  const list = inspectionsFor(id), active = list.find(i => i.status !== 'complete');
+  const start = active ? `<button class="btn block" data-act="open-insp" data-id="${esc(active.id)}">Continue ${esc(LEVELS[active.level])} inspection</button>` : `
+    <div class="sec"><div class="sec-h"><h3>New inspection</h3></div>
+      <label class="f"><span>Inspector</span><input class="in" id="inspector" value="${esc(lsGet('bsi-inspector', ''))}" placeholder="Your name" autocomplete="name"></label>
+      <div class="seg" role="group" aria-label="Inspection level">${[2, 1].map(n => `<button aria-pressed="${S.level === n}" data-act="lvl" data-v="${n}">${LEVELS[n]}</button>`).join('')}</div>
+      <button class="btn block" data-act="start">Start inspection</button></div>`;
+  return `
+  <div class="row" style="gap:12px;align-items:flex-start">${tIcon(typeOf(b))}
+    <div class="grow"><span class="mono sub" style="font-weight:600">${esc(T.name)} ${esc(b.bridgeNo)}${b.project ? ' · Project ' + esc(b.project) : ''}${b.region ? ' · ' + esc(b.region) : ''}</span>
+    <h2 class="big">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(', ') || 'Structure')}</h2></div></div>
+  <div class="facts">${factsOf(b).map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v)}</b></div>`).join('')}<div><span class="sub">Components</span><b>${b.components.length}</b></div></div>
+  <div class="card"><b>Details</b>
+    <div class="row wrap" style="align-items:flex-start">
+      <label class="f" style="min-width:140px"><span>Project number</span><input class="in" id="d-project" value="${esc(b.project || '')}" placeholder="e.g. P-2026-014"></label>
+      <label class="f" style="min-width:140px"><span>Bridge / structure No.</span><input class="in" id="d-bridgeNo" value="${esc(b.bridgeNo || '')}"></label></div>
+    <div class="row wrap" style="align-items:flex-start">
+      <label class="f" style="min-width:160px"><span>Road</span><input class="in" id="d-road" value="${esc(b.road || '')}"></label>
+      <label class="f" style="max-width:130px"><span>SLK</span><input class="in" id="d-slk" inputmode="decimal" value="${esc(b.slk || '')}"></label></div>
+    <label class="f"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
+    <button class="btn out sm" data-act="save-details">Save details</button></div>
+  <div class="card"><div class="row between wrap"><span class="sub">GPS · ${typeOf(b) === 'underpass' ? 'Entry 1' : 'Abutment 1, LHS top corner'}</span><button class="btn out sm" data-act="gps-here">${ICON.pin} Use my location</button></div>
+    <div class="row wrap" style="align-items:flex-end">
+      <label class="f" style="min-width:130px"><span>Latitude</span><input class="in mono" id="lat" inputmode="decimal" value="${b.gps ? esc(b.gps.lat) : ''}" placeholder="-31.950000"></label>
+      <label class="f" style="min-width:130px"><span>Longitude</span><input class="in mono" id="lng" inputmode="decimal" value="${b.gps ? esc(b.gps.lng) : ''}" placeholder="115.860000"></label>
+      <button class="btn out sm" style="min-height:48px" data-act="save-gps">Save</button></div></div>
+  ${start}
+  <div class="sec"><div class="sec-h"><h3>History</h3></div>
+    ${list.length ? list.map(i => { const t = tally(i, b);
+      return `<button class="tap" data-act="${i.status === 'complete' ? 'open-review' : 'open-insp'}" data-id="${esc(i.id)}">
+      <span class="grow">${esc(LEVELS[i.level])} · ${fmtDate(i.completedAt || i.startedAt)}<br><span class="sub">${t.def} with defects · ${t.photos} photos${i.inspector ? ' · ' + esc(i.inspector) : ''}</span></span>
+      <span class="sub" style="${i.status !== 'complete' ? 'color:var(--link);font-weight:600' : ''}">${i.status === 'complete' ? 'Complete' : 'In progress'}</span>${ICON.chev}</button>`; }).join('')
+      : '<span class="sub">No inspections yet.</span>'}</div>
+  ${S.confirm === 'del-bridge' ? `<div class="confirm"><span class="grow">Delete ${esc(b.bridgeNo)} and all its inspections and photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-bridge" data-id="${esc(id)}">Delete</button></div>`
+    : `<button class="btn ghost" data-act="ask" data-what="del-bridge">Delete bridge</button>`}`;
+}
+
+/* ---------- Checklist ---------- */
+function viewChecklist(id) {
+  const insp = Store.get('inspections', id); if (!insp) return gone();
+  const b = Store.get('bridges', insp.bridgeId); if (!b) return gone();
+  setBar(`${b.bridgeNo} · ${LEVELS[insp.level].split(' ·')[0]}`, 'Bridge');
+  const comps = b.components, I = itemsOf(insp), pc = photoCounts(insp);
+  const st = c => statusOf(I[c.id], pc[c.id]), t = tally(insp, b);
+  const locs = [...new Set(comps.map(c => c.loc))];
+  if (!S.loc || !locs.includes(S.loc)) S.loc = locs.find(l => comps.some(c => c.loc === l && !st(c).done)) || locs[0];
+  return `
+  <div><h2 class="big">${esc(LEVELS[insp.level])} inspection</h2><span class="sub">${esc(TEMPLATES[typeOf(b)].name)} ${esc(b.bridgeNo)} · numbered in the direction of increasing SLK, left to right.</span></div>
+  <div class="sec"><div class="row between wrap"><b>${t.done} of ${t.total} inspected</b><span class="sub">${t.def} with defects · ${t.photos} photos</span></div>
+    <div class="prog" role="img" aria-label="${t.done} of ${t.total} inspected, ${t.def} with defects"><i style="width:${t.def / t.total * 100}%;background:var(--def)"></i><i style="width:${(t.done - t.def) / t.total * 100}%;background:var(--ink)"></i></div></div>
+  <div class="chips loc" role="tablist" aria-label="Location">
+    ${locs.map(l => { const left = comps.filter(c => c.loc === l && !st(c).done).length;
+      return `<button class="chip${left ? '' : ' alldone'}" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${left ? '' : ICON.check + ' '}${locLabel(l)}</button>`; }).join('')}
+  </div>
+  <div class="sec">${comps.filter(c => c.loc === S.loc).map(c => {
+    const it = I[c.id] || {}, s = st(c), sub = [(it.defects || []).slice(0, 3).join(', '), pc[c.id] ? `${pc[c.id]} photo${pc[c.id] > 1 ? 's' : ''}` : '', it.comment ? '“' + it.comment.slice(0, 40) + (it.comment.length > 40 ? '…' : '') + '”' : ''].filter(Boolean).join(' · ') || c.ph + '.jpg';
+    return `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
+      <span class="grow" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:16px">${esc(c.name)}</b><span class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</span></span>
+      <span class="badge ${s.cls}">${s.label}</span></button>`;
+  }).join('')}</div>
+  <button class="btn dark block" data-act="open-review" data-id="${esc(id)}">Review &amp; finish</button>`;
+}
+
+/* ---------- Component: defects, comments, photos ---------- */
+function getDraft(inspId, cid) {
+  if (!S.draft || S.draft.inspId !== inspId || S.draft.cid !== cid) {
+    const it = itemsOf(Store.get('inspections', inspId))[cid] || {};
+    S.draft = { inspId, cid, it: { defects: [...(it.defects || [])], none: !!it.none, na: !!it.na, comment: it.comment || '' } };
+  }
+  return S.draft;
+}
+let draftT;
+function touchDraft() { clearTimeout(draftT); draftT = setTimeout(flushDraft, 400); }
+function flushDraft() {
+  clearTimeout(draftT);
+  const d = S.draft; if (!d) return;
+  const insp = Store.get('inspections', d.inspId); if (!insp) return;
+  const prev = itemsOf(insp)[d.cid], next = { ...d.it, defects: [...d.it.defects], updatedAt: now() };
+  if (prev && JSON.stringify({ ...prev, updatedAt: 0 }) === JSON.stringify({ ...next, updatedAt: 0 })) return;
+  if (!prev && !next.defects.length && !next.none && !next.na && !next.comment) return;
+  Store.patch('inspections', d.inspId, { items: { [d.cid]: next } });
+}
+function photoTile(p, ro, name) {
+  return `<div class="ph"><img alt="Photo ${esc(name || '')}" src="${esc(Store.photoSrc(p.id))}" data-pid="${esc(p.id)}"><span class="pname">${esc(name || '')}.jpg</span>${ro ? '' : `<button data-act="del-photo" data-pid="${esc(p.id)}" aria-label="Remove photo ${esc(name || '')}">×</button>`}</div>`;
+}
+function viewComponent(inspId, cid) {
+  const insp = Store.get('inspections', inspId); if (!insp) return gone();
+  const b = Store.get('bridges', insp.bridgeId), c = b.components.find(x => x.id === cid); if (!c) return gone();
+  const ro = false, it = getDraft(inspId, cid).it, dis = ro ? 'disabled' : '';
+  const photos = photosOf(insp, cid), names = photoNames(insp, b);
+  setBar(c.code, 'Components');
+  return `
+  <div><h2 class="big">${esc(c.name)}</h2><span class="sub">${locLabel(c.loc)} · <span class="mono">${esc(c.code)}</span> · photos save as <span class="mono">${esc(c.ph)}.jpg</span>${ro ? ' · completed, read only' : ''}</span></div>
+  <div class="sec"><div class="sec-h"><h3>Defects observed</h3>${it.defects.length ? `<span class="sub">${it.defects.length} selected</span>` : ''}</div>
+    <div class="chips">
+      <button class="chip okc" aria-pressed="${it.none}" data-act="none" ${dis}>No defects</button>
+      ${TEMPLATES[typeOf(b)].defects.map(x => `<button class="chip" aria-pressed="${it.defects.includes(x)}" data-act="defect" data-v="${esc(x)}" ${dis}>${esc(x)}</button>`).join('')}
+      <button class="chip nac" aria-pressed="${it.na}" data-act="na" ${dis}>Not accessible</button></div></div>
+  <div class="sec"><div class="sec-h"><h3>Comments</h3>${ro ? '' : `<button class="btn out sm" data-act="dictate" data-for="cmt">${ICON.mic} Speak</button>`}</div>
+    <label class="f"><span class="sr">Comments</span><textarea class="in" id="cmt" data-in="comment" autocapitalize="sentences" spellcheck="true" placeholder="Type, or tap Speak and use the microphone on your keyboard. E.g. 300 mm crack at mid-span, upstream face" ${dis}>${esc(it.comment)}</textarea></label></div>
+  <div class="sec"><div class="sec-h"><h3>Photos (${photos.length})</h3></div>
+    ${ro ? '' : `<div class="row"><button class="btn out grow" data-act="photo" data-cid="${esc(cid)}">${ICON.cam} Take photo</button><button class="btn ghost" data-act="photo-lib" data-cid="${esc(cid)}">${ICON.img} Choose several</button></div>`}
+    ${photos.length ? `<div class="photos">${photos.map(p => photoTile(p, ro, names[p.id])).join('')}</div>` : '<span class="sub">No photos yet. Take as many as you need; extra photos are numbered _2, _3 …</span>'}</div>
+  <div class="row stick"><button class="btn grow" data-act="done" data-cid="${esc(cid)}">${ro ? 'Back to list' : 'Done'}</button></div>`;
+}
+
+/* ---------- Review & finish ---------- */
+function viewReview(id) {
+  const insp = Store.get('inspections', id); if (!insp) return gone();
+  const b = Store.get('bridges', insp.bridgeId); if (!b) return gone();
+  const done = insp.status === 'complete', t = tally(insp, b), I = itemsOf(insp), pc = photoCounts(insp);
+  setBar(done ? 'Inspection record' : 'Review & finish', done ? 'Bridge' : 'Checklist');
+  const withDef = b.components.filter(c => (I[c.id]?.defects || []).length);
+  const todo = t.total - t.done, dis = '', names = photoNames(insp, b);
+  return `
+  <div><h2 class="big">${done ? 'Inspection complete' : 'Review & finish'}</h2><span class="sub">${esc(TEMPLATES[typeOf(b)].name)} ${esc(b.bridgeNo)} · ${esc(LEVELS[insp.level])} · started ${fmtDate(insp.startedAt)}${insp.inspector ? ' by ' + esc(insp.inspector) : ''}</span></div>
+  ${!done && todo ? `<div class="card warn"><span>${todo} component${todo > 1 ? 's have' : ' has'} nothing recorded yet.</span>
+    <div class="row wrap"><button class="btn out sm" data-act="mark" data-v="none" data-id="${esc(id)}">Mark the rest “No defects”</button><button class="btn ghost sm" data-act="mark" data-v="na" data-id="${esc(id)}">Mark the rest “Not accessible”</button></div></div>` : ''}
+  <div class="facts">
+    <div><span class="sub">Inspected</span><b>${t.done} / ${t.total}</b></div>
+    <div><span class="sub">With defects</span><b>${t.def}</b></div>
+    <div><span class="sub">No defects</span><b>${t.ok}</b></div>
+    <div><span class="sub">Not accessible</span><b>${t.na}</b></div>
+    <div><span class="sub">Photos</span><b>${t.photos}</b></div>
+    <div><span class="sub">Bridge type</span><b>${esc(TEMPLATES[typeOf(b)].name.replace(' bridge', ''))}</b></div></div>
+  <div class="sec"><div class="sec-h"><h3>Defects found (${withDef.length})</h3></div>
+    ${withDef.length ? withDef.map(c => `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
+      <span class="grow"><b>${esc(c.name)}</b> <span class="sub">${locLabel(c.loc)}</span><br><span>${esc(I[c.id].defects.join(', '))}</span>${I[c.id].comment ? `<br><span class="sub">${esc(I[c.id].comment)}</span>` : ''}</span>
+      <span class="badge b-def">${pc[c.id] || 0} photo${pc[c.id] === 1 ? '' : 's'}</span></button>`).join('') : '<span class="sub">No defects recorded.</span>'}</div>
+  <div class="sec"><div class="sec-h"><h3>Summary</h3>${`<button class="btn out sm" data-act="dictate" data-for="summary">${ICON.mic} Speak</button>`}</div>
+    <label class="f"><span class="sr">Inspection summary</span><textarea class="in" id="summary" data-in="review" autocapitalize="sentences" spellcheck="true" placeholder="Overall condition, key findings, access issues" ${dis}>${esc(insp.summary || '')}</textarea></label>
+    <label class="f"><span>Inspector</span><input class="in" id="inspector2" data-in="review" value="${esc(insp.inspector || '')}" placeholder="Name" ${dis}></label>
+    ${done ? `<span class="sub">Completed ${insp.completedAt ? new Date(insp.completedAt).toLocaleString('en-AU') : ''}. You can still change anything; changes save and sync as usual.</span>
+    <button class="btn out block" data-act="open-insp" data-id="${esc(id)}">Edit components &amp; photos</button>` : ''}</div>
+  ${done ? '' : S.confirm === 'finish' ? `<div class="card fin" role="group" aria-labelledby="fin-h"><b id="fin-h" style="font-size:17px">Confirm before finishing</b>
+      <span class="sub" style="color:var(--ink)">${t.done} of ${t.total} components inspected · ${t.def} with defects · ${t.photos} photos${todo ? ` · <b style="color:var(--danger)">${todo} not inspected</b>` : ''}</span>
+      <span class="sub">The inspection will be marked complete and the Word report and pictures exported. You can still make changes afterwards.</span>
+      <div class="row"><button class="btn ghost grow" data-act="cancel">Go back</button><button class="btn grow" id="finish-btn" data-act="finish" data-id="${esc(id)}">Finish</button></div></div>`
+    : `<button class="btn block" data-act="ask" data-what="finish">Complete inspection</button>`}
+  <div class="sec"><div class="sec-h"><h3>Export</h3></div>
+    <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
+    <span class="sub">One folder named <span class="mono">${esc(pkgName(insp, b))}</span> with the Word report (summary table, then each picture captioned “Picture 1: Abutment 1 Pile No.1 - …”), every picture as its own file in <span class="mono">Photos/</span> (${t.photos ? esc(Object.values(names).slice(0, 2).join('.jpg, ')) + '.jpg …' : esc(b.components.filter(c => c.loc !== 'GEN').slice(0, 2).map(c => c.ph + '.jpg').join(', ') + ' …')}) and a picture index. Works offline.</span>
+    <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} ${isAndroid() ? 'Save all pictures to gallery' : 'Save all pictures to Photos'}</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div>
+    <button class="btn out block" data-act="open-layout" data-id="${esc(id)}">${ICON.doc} Picture report – arrange pictures for Word (PC / laptop)</button></div>
+  ${S.confirm === 'del-insp' ? `<div class="confirm"><span class="grow">Delete this inspection and its photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-insp" data-id="${esc(id)}">Delete</button></div>`
+    : `<button class="btn ghost" data-act="ask" data-what="del-insp">Delete inspection</button>`}`;
+}
+
+/* =========================================================================
+   Actions
+   ========================================================================= */
+let photoTarget = null;
+const A = {
+  back, home() { S.stack = []; S.route = { name: 'home' }; render(); },
+  data() { A.tab({ v: 'data' }); },
+  tab(d) { closeSheet(); S.stack = []; S.route = { name: d.v }; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0); },
+  day(d) { S.day = d.v; render(); },
+  plus() { openNewSheet(); },
+  'photo-open'(d) { nav({ name: 'component', id: d.insp, cid: d.cid }); },
+  folder(d) { nav({ name: 'photofolder', id: d.id }); },
+  'lb-open'(d) { S.lb.i = +d.k; lbRender(); },
+  'lb-prev'() { if (S.lb.i > 0) { S.lb.i--; lbRender(); } },
+  'lb-next'() { if (S.lb.i < S.lb.list.length - 1) { S.lb.i++; lbRender(); } },
+  'lb-close'() { lbClose(); },
+  'lb-comp'() { const x = S.lb.list[S.lb.i]; lbClose(); nav({ name: 'component', id: x.insp.id, cid: x.cid }); },
+  new(d) { closeSheet(); S.form = newForm(d.type); nav({ name: 'add' }); },
+  ft(d) { S.ft = d.v; render(); },
+  async sample() {
+    const layout = { spans: 3, stringersPerSpan: 5, pilesPerPier: 4, abutPiles: 4, abutType: 'sheeting', corbels: 'yes' };
+    await Store.put('bridges', uid(), { type: 'timber', bridgeNo: '0000', road: 'Sample Road', slk: '4.21', region: 'Sample', layout, components: generateComponents('timber', layout), gps: null, sample: true, createdAt: now() });
+    render(); toast('Sample bridge added. Delete it when you are done trying the app.');
+  },
+  'open-bridge'(d) { S.level = 2; nav({ name: 'bridge', id: d.id }); },
+  step(d) { const f = S.form; f[d.k] = Math.min(+d.max, Math.max(+d.min, f[d.k] + +d.d)); render(); },
+  'form-set'(d) { S.form[d.k] = d.v; render(); },
+  async 'save-bridge'() {
+    const f = S.form, T = TEMPLATES[f.type];
+    if (!f.bridgeNo.trim()) { toast('Enter the bridge or structure number.'); $('#f-bridgeNo').focus(); return; }
+    const layout = {}; T.params.forEach(([k]) => layout[k] = f[k]); T.choices.forEach(([k]) => layout[k] = f[k]);
+    const id = uid();
+    await Store.put('bridges', id, { type: f.type, project: (f.project || '').trim(), bridgeNo: f.bridgeNo.trim(), road: f.road.trim(), slk: f.slk.trim(), region: f.region.trim(), layout, components: generateComponents(f.type, layout), gps: null, createdAt: now() });
+    S.form = null; S.level = 2; nav({ name: 'bridge', id }, true); toast('Saved on this device.');
+  },
+  async 'gps-here'() {
+    toast('Getting location…'); const fix = await getFix(15000);
+    if (!fix) { toast('No GPS fix. Allow location for this app in Settings, and try in the open.'); return; }
+    $('#lat').value = fix.lat; $('#lng').value = fix.lng; toast(`Location found (±${fix.acc} m). Tap Save to keep it.`);
+  },
+  async 'save-details'() {
+    const v = k => $('#d-' + k).value.trim();
+    if (!v('bridgeNo')) { toast('Enter the bridge or structure number.'); $('#d-bridgeNo').focus(); return; }
+    await Store.patch('bridges', S.route.id, { project: v('project'), bridgeNo: v('bridgeNo'), road: v('road'), slk: v('slk'), region: v('region') });
+    toast('Details saved.'); render();
+  },
+  async 'save-gps'() {
+    const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
+    if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) { toast('Enter latitude and longitude in decimal degrees, e.g. -31.95 and 115.86.'); return; }
+    await Store.patch('bridges', S.route.id, { gps: { lat, lng } }); toast('GPS saved.'); render();
+  },
+  lvl(d) { S.level = +d.v; const n = $('#inspector').value; render(); $('#inspector').value = n; },
+  async start() {
+    const name = $('#inspector').value.trim();
+    if (!name) { toast('Enter the inspector name first.'); $('#inspector').focus(); return; }
+    lsSet('bsi-inspector', name);
+    const id = uid();
+    await Store.put('inspections', id, { bridgeId: S.route.id, level: S.level || 2, status: 'in_progress', startedAt: now(), completedAt: null, inspector: name, summary: '', items: {}, photos: {} });
+    S.loc = null; nav({ name: 'checklist', id });
+  },
+  'open-insp'(d) { S.loc = null; nav({ name: 'checklist', id: d.id }); },
+  'open-review'(d) { nav({ name: 'review', id: d.id || S.route.id }); },
+  loc(d) { S.loc = d.loc; render(); },
+  'open-comp'(d) { nav({ name: 'component', id: S.route.id, cid: d.cid }); },
+  done(d) {
+    const el = $('#cmt'); if (el && S.draft) S.draft.it.comment = el.value;
+    flushDraft(); S.lastCid = d.cid; const inspId = S.route.id; back();
+    const insp = Store.get('inspections', inspId);
+    if (insp) toast(statusOf(itemsOf(insp)[d.cid], photosOf(insp, d.cid).length).done ? 'Saved.' : 'Nothing recorded for that component yet.');
+  },
+  none() { const it = S.draft.it; it.none = !it.none; if (it.none) { it.defects = []; it.na = false; } touchDraft(); render(); },
+  na() { const it = S.draft.it; it.na = !it.na; if (it.na) it.none = false; touchDraft(); render(); },
+  defect(d) { const it = S.draft.it; it.defects = it.defects.includes(d.v) ? it.defects.filter(x => x !== d.v) : [...it.defects, d.v]; if (it.defects.length) { it.none = false; it.na = false; } touchDraft(); render(); },
+  dictate(d) {
+    const el = document.getElementById(d.for); if (!el) return;
+    el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch {}
+    if (n && !/\s$/.test(el.value)) { el.value += ' '; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    toast('Tap the microphone on your keyboard and speak.');
+  },
+  photo(d) { flushDraft(); photoTarget = { cid: d.cid, camera: true }; $('#photo-in').value = ''; $('#photo-in').click(); },
+  'photo-lib'(d) { flushDraft(); photoTarget = { cid: d.cid }; $('#photo-lib').value = ''; $('#photo-lib').click(); },
+  async 'del-photo'(d) { await Store.patch('inspections', S.route.id, { photos: { [d.pid]: { deleted: true, updatedAt: now() } } }); render(); Store.removePhoto(d.pid); },
+  async mark(d) {
+    const insp = Store.get('inspections', d.id), b = Store.get('bridges', insp.bridgeId), pc = photoCounts(insp), patch = {};
+    b.components.forEach(c => { if (!statusOf(itemsOf(insp)[c.id], pc[c.id]).done) patch[c.id] = { defects: [], none: d.v === 'none', na: d.v === 'na', comment: '', updatedAt: now() }; });
+    await Store.patch('inspections', d.id, { items: patch }); render();
+  },
+  ask(d) { S.confirm = d.what; render(); },
+  cancel() { S.confirm = null; render(); },
+  async finish(d) {
+    const name = $('#inspector2').value.trim(); if (name) lsSet('bsi-inspector', name);
+    await Store.patch('inspections', d.id, { inspector: name, summary: $('#summary').value.trim(), status: 'complete', completedAt: now() });
+    S.confirm = null; render(); toast('Inspection completed. Preparing the export…');
+    exportPackage(d.id);
+  },
+  async 'del-insp'(d) {
+    const insp = Store.get('inspections', d.id);
+    await Store.remove('inspections', d.id);
+    photosOf(insp || {}).forEach(p => Store.removePhoto(p.id));
+    S.stack = S.stack.filter(r => r.id !== d.id || r.name === 'bridge'); S.route = S.stack.pop() || { name: 'home' };
+    S.confirm = null; render(); toast('Inspection deleted.');
+  },
+  async 'del-bridge'(d) {
+    for (const i of inspectionsFor(d.id)) { await Store.remove('inspections', i.id); photosOf(i).forEach(p => Store.removePhoto(p.id)); }
+    await Store.remove('bridges', d.id); S.stack = []; S.route = { name: 'home' }; S.confirm = null; render(); toast('Bridge deleted.');
+  },
+  pkg(d) { flushReview(); exportPackage(d.id); },
+  docx(d) { flushReview(); makeDocx(d.id); },
+  pics(d) { flushReview(); exportPackage(d.id, true); },
+  json(d) { flushReview(); exportJson(d.id); },
+  'gps-toggle'() { lsSet('bsi-gps', !lsGet('bsi-gps', true)); render(); },
+  async 'sync-save'() {
+    const v = $('#sync-url').value.trim(), cfg = String(window.BSI_CONFIG?.syncUrl || '').trim();
+    if (v && !/^https:\/\/script\.google(usercontent)?\.com\//.test(v)) { toast('That does not look like a Google Apps Script web app address (https://script.google.com/macros/s/…/exec).'); return; }
+    const changed = v !== Sync.url;
+    lsSet('bsi-sync-url', v === cfg ? '' : v);
+    if (changed) { await IDB.put('meta', 'cursor', 0); await Sync.queueAll(); }
+    if (!v) { render(); toast('Sync switched off on this phone.'); return; }
+    try { await Sync.post({ op: 'ping' }); toast('Connected. Syncing…'); Sync.run(); }
+    catch (e) { toast('Saved, but could not connect: ' + e.message); }
+    render();
+  },
+  async install() { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch {} installEvt = null; render(); },
+  'sync-now'() { Sync.run(true); render(); },
+  'camroll-toggle'() { lsSet('bsi-camroll', !lsGet('bsi-camroll', true)); render(); },
+  async 'save-all-photos'(d) {
+    const insp = Store.get('inspections', d.id), b = Store.get('bridges', insp.bridgeId);
+    toast('Collecting pictures…'); const { pics } = await collectPictures(insp, b);
+    if (!pics.length) { toast('No pictures in this inspection yet.'); return; }
+    offerPhotos(pics);
+  },
+  backup() { backupAll(); },
+  'restore-pick'() { $('#restore-in').value = ''; $('#restore-in').click(); },
+  'restore-cancel'() { S.restore = null; render(); },
+  'restore-apply'() { applyRestore(); },
+  'sheet-share'() { shareReady(); },
+  'sheet-save'() { downloadReady(); },
+  'sheet-close'() { closeSheet(); },
+};
+let reviewT;
+function flushReview() {
+  clearTimeout(reviewT); if (S.route.name !== 'review') return;
+  const i = Store.get('inspections', S.route.id); if (!i) return;
+  const s = $('#summary')?.value ?? i.summary, n = $('#inspector2')?.value ?? i.inspector;
+  if (s !== i.summary || n !== i.inspector) Store.patch('inspections', S.route.id, { summary: s, inspector: n });
+}
+const IN = {
+  q(el) { S.q = el.value; $('#blist').innerHTML = bridgeList(); },
+  form(el) { S.form[el.dataset.k] = el.value; },
+  comment(el) { S.draft.it.comment = el.value; touchDraft(); },
+  review() { clearTimeout(reviewT); reviewT = setTimeout(flushReview, 600); },
+};
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el || el.disabled) return; const fn = A[el.dataset.act]; if (fn) { e.preventDefault(); fn(el.dataset, el); } });
+/* ---------- Picture report (PC / laptop) ----------
+   Left: the inspection's elements; click one to show its pictures. Drag pictures (or a whole
+   element) onto the A4 pages. Two pictures fit per page; numbering and captions run automatically,
+   and each picture's size and description can be changed. Export builds the Word file. */
+const PR = { mm: 3, open: new Set(), drag: null, sideTop: 0, saveT: null, rotUrl: {} };
+// Turn a photo by 90/180/270 degrees (clockwise). maxSide limits the size for on-screen previews.
+async function rotBlob(blob, rot, maxSide = 0) {
+  const img = await loadImage(blob), W = img.naturalWidth, H = img.naturalHeight;
+  let k = Math.min(1, Math.sqrt(CANVAS_MAX_PX / (W * H))); if (maxSide) k = Math.min(k, maxSide / Math.max(W, H));
+  const w = Math.round(W * k), h = Math.round(H * k), c = document.createElement('canvas'), turn = rot % 180 !== 0;
+  c.width = turn ? h : w; c.height = turn ? w : h;
+  const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate(rot * Math.PI / 180); g.drawImage(img, -w / 2, -h / 2, w, h);
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Could not rotate the photo')), 'image/jpeg', 0.92));
+}
+async function prRotPreview(img) {
+  const pid = img.dataset.rpid, rot = +img.dataset.rot, key = pid + '@' + rot;
+  if (!PR.rotUrl[key]) { const bl = await Store.photoBlob(pid); if (!bl) return; PR.rotUrl[key] = URL.createObjectURL(await rotBlob(bl, rot, 1800)); }
+  if (img.isConnected && img.getAttribute('src') !== PR.rotUrl[key]) img.src = PR.rotUrl[key];
+}
+const PR_BOX = { half: { w: 160, h: 108 }, full: { w: 160, h: 228 } };   // mm inside 20 mm A4 margins
+const prKey = id => 'bsi-layout-' + id;
+function prLoad(id) { const L = lsGet(prKey(id), null); return L && Array.isArray(L.items) ? L : { title: '', items: [] }; }
+function prSave() { clearTimeout(PR.saveT); PR.saveT = setTimeout(() => { if (S.layId && S.lay) lsSet(prKey(S.layId), S.lay); }, 250); }
+function prInspections() {
+  return Store.all('inspections').filter(i => Store.get('bridges', i.bridgeId) && photosOf(i).length)
+    .sort((a, b) => (b.updatedAt || b.startedAt || '').localeCompare(a.updatedAt || a.startedAt || ''));
+}
+function prPics(insp, b) {
+  const names = photoNames(insp, b), compBy = Object.fromEntries(b.components.map(c => [c.id, c])), I = itemsOf(insp), out = {};
+  orderedPhotos(insp, b).forEach(p => { const c = compBy[p.componentId]; out[p.id] = { pid: p.id, cid: p.componentId, c, name: names[p.id], auto: captionOf(c, c ? I[c.id] : null) }; });
+  return out;
+}
+// Pages: a normal picture takes half a page, a "full page" picture a whole one.
+function prPages(items) {
+  const pages = []; let cur = null;
+  items.forEach((x, i) => { const u = x.full ? 2 : 1; if (!cur || cur.used + u > 2) { cur = { used: 0, list: [] }; pages.push(cur); } cur.list.push({ x, i }); cur.used += u; });
+  return pages;
+}
+const prCap = (x, pics) => x.cap != null ? x.cap : pics[x.pid].auto;
+const prImgStyle = x => { const box = x.full ? PR_BOX.full : PR_BOX.half, s = (x.size || 100) / 100; return `max-width:calc(${(box.w * s).toFixed(1)} * var(--mm));max-height:calc(${(box.h * s).toFixed(1)} * var(--mm))`; };
+
+function viewLayout(id) {
+  PR.sideTop = $('.pr-side')?.scrollTop || 0;
+  setBar('Picture report', 'Back');
+  const all = prInspections();
+  let insp = id && Store.get('inspections', id);
+  if (!insp || !photosOf(insp).length) {
+    if (!all.length) return '<div class="card"><b>No photos yet</b><span class="sub">Take photos during an inspection (or let this computer sync from Google Drive), then come back here.</span></div>';
+    insp = all[0]; S.route.id = insp.id;
+  }
+  const iid = S.route.id, b = Store.get('bridges', insp.bridgeId);
+  if (S.layId !== iid) { S.lay = prLoad(iid); S.layId = iid; }
+  const pics = prPics(insp, b), L = S.lay;
+  L.items = L.items.filter(x => pics[x.pid]);
+  const used = new Set(L.items.map(x => x.pid)), num = Object.fromEntries(L.items.map((x, i) => [x.pid, i + 1]));
+  // Left menu: location → element → pictures
+  const byLoc = [];
+  b.components.forEach(c => {
+    const ps = Object.values(pics).filter(p => p.cid === c.id); if (!ps.length) return;
+    let g = byLoc.find(g => g.loc === c.loc); if (!g) byLoc.push(g = { loc: c.loc, comps: [] });
+    g.comps.push({ c, ps });
+  });
+  const orphans = Object.values(pics).filter(p => !p.c);
+  if (orphans.length) byLoc.push({ loc: '', comps: [{ c: { id: '', name: 'Other photos' }, ps: orphans }] });
+  const total = Object.keys(pics).length;
+  const side = `<aside class="pr-side" aria-label="Pictures">
+    <label class="f"><span>Inspection</span><select class="in" data-pr="insp">${all.map(i => { const bb = Store.get('bridges', i.bridgeId);
+      return `<option value="${esc(i.id)}" ${i.id === iid ? 'selected' : ''}>${esc(typeShort(bb))} ${esc(bb.bridgeNo)}${bb.project ? ' · ' + esc(bb.project) : ''} · ${esc(fmtDate(i.startedAt))}</option>`; }).join('')}</select></label>
+    <div class="row between"><span class="sub">${used.size} of ${total} pictures in report</span><button class="btn sm" data-act="pr-addall" ${used.size === total ? 'disabled' : ''}>Add all</button></div>
+    <span class="sub">Click an element to show its pictures, then drag them onto the pages (or click +).</span>
+    ${byLoc.map(g => `<div class="pr-loc"><h4>${esc(g.loc ? locFull(g.loc) || 'General' : 'Other')}</h4>
+      ${g.comps.map(({ c, ps }) => { const k = c.id || '_', open = PR.open.has(k), n = ps.filter(p => used.has(p.pid)).length;
+        return `<div class="pr-el ${open ? 'open' : ''}">
+        <div class="pr-eh" draggable="true" data-dcomp="${esc(c.id)}"><button class="pr-et" data-act="pr-toggle" data-k="${esc(k)}" aria-expanded="${open}">${ICON.chev}<span class="grow">${esc(c.id ? compFull(c) : c.name)}</span><span class="pr-cnt ${n === ps.length ? 'all' : ''}">${n}/${ps.length}</span></button>
+          <button class="pr-plus" data-act="pr-addcomp" data-cid="${esc(c.id)}" aria-label="Add all pictures of ${esc(c.id ? compFull(c) : c.name)}" title="Add all pictures of this element" ${n === ps.length ? 'disabled' : ''}>+</button></div>
+        ${open ? `<div class="pr-thumbs">${ps.map(p => `<div class="pr-th ${used.has(p.pid) ? 'used' : ''}" draggable="true" data-dpid="${esc(p.pid)}" title="${esc(p.name)}.jpg">
+          <img alt="${esc(p.name)}" src="${esc(Store.photoSrc(p.pid))}" data-pid="${esc(p.pid)}" draggable="false"><span class="pname">${esc(p.name)}</span>
+          ${used.has(p.pid) ? `<span class="pr-num" aria-label="Picture ${num[p.pid]}">${num[p.pid]}</span>` : `<button class="pr-add" data-act="pr-add" data-pid="${esc(p.pid)}" aria-label="Add ${esc(p.name)} to the report">+</button>`}</div>`).join('')}</div>` : ''}</div>`; }).join('')}</div>`).join('')}
+  </aside>`;
+  const pages = prPages(L.items), last = pages[pages.length - 1];
+  const head = `<div class="pg-head" data-head>${esc(L.title || '')}</div>`;
+  const fig = ({ x, i }) => `<figure class="pr-fig" draggable="true" data-idx="${i}" data-drop="${i}">
+      <div class="pr-ft" role="group" aria-label="Picture ${i + 1} options">
+        <label title="Picture size">Size <input type="range" min="30" max="100" step="5" value="${x.size || 100}" data-pr="size" data-idx="${i}" aria-label="Size of picture ${i + 1}"></label>
+        <span class="pr-dim" data-dim="${i}"></span>
+        <button data-act="pr-rot" data-idx="${i}" data-v="270" aria-label="Rotate picture ${i + 1} left" title="Rotate left">⟲</button>
+        <button data-act="pr-rot" data-idx="${i}" data-v="90" aria-label="Rotate picture ${i + 1} right" title="Rotate right">⟳</button>
+        <button data-act="pr-full" data-idx="${i}" title="${x.full ? 'Back to two per page' : 'Use the whole page'}">${x.full ? '½ page' : 'Full page'}</button>
+        <button data-act="pr-move" data-idx="${i}" data-v="-1" aria-label="Move picture ${i + 1} earlier" ${i ? '' : 'disabled'}>↑</button>
+        <button data-act="pr-move" data-idx="${i}" data-v="1" aria-label="Move picture ${i + 1} later" ${i < L.items.length - 1 ? '' : 'disabled'}>↓</button>
+        <button data-act="pr-del" data-idx="${i}" aria-label="Remove picture ${i + 1}" title="Remove">✕</button></div>
+      ${x.rot ? `<img alt="" src="${esc(PR.rotUrl[x.pid + '@' + x.rot] || '')}" data-rpid="${esc(x.pid)}" data-rot="${x.rot}" data-fi="${i}" draggable="false" style="${prImgStyle(x)}">`
+        : `<img alt="" src="${esc(Store.photoSrc(x.pid))}" data-pid="${esc(x.pid)}" data-fi="${i}" draggable="false" style="${prImgStyle(x)}">`}
+      <figcaption>Picture ${i + 1}: <span class="pr-cap" contenteditable="true" spellcheck="true" data-idx="${i}" aria-label="Description of picture ${i + 1}">${esc(prCap(x, pics))}</span>${x.cap != null ? ` <button class="pr-reset" data-act="pr-reset" data-idx="${i}" title="Use the automatic description" aria-label="Use the automatic description">↺</button>` : ''}</figcaption>
+    </figure>`;
+  const drop = txt => `<div class="pr-drop" data-drop="end">${txt}</div>`;
+  const pagesHtml = pages.map((pg, pi) => `<div class="pg" aria-label="Page ${pi + 1}">${head}${pg.list.map(fig).join('')}${pg === last && last.used < 2 ? drop('Drop a picture here') : ''}<span class="pg-no">${pi + 1}</span></div>`).join('')
+    + (!pages.length || last.used >= 2 ? `<div class="pg ghost">${head}${drop(pages.length ? 'Drop here to start a new page' : 'Drag pictures from the left and drop them here')}</div>` : '');
+  return `<div class="pr">${side}
+  <section class="pr-work" aria-label="Report pages">
+    <div class="pr-tools">
+      <div><b style="font-size:17px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b> <span class="sub">· ${L.items.length} picture${L.items.length === 1 ? '' : 's'} · ${pages.length} page${pages.length === 1 ? '' : 's'}</span></div>
+      <label class="f grow" style="min-width:220px"><span class="sr">Page heading</span><input class="in" data-pr="title" value="${esc(L.title || '')}" placeholder="Page heading (optional), e.g. Appendix A – Photographs"></label>
+      <div class="row" style="gap:6px"><button class="icb soft" data-act="pr-zoom" data-v="-0.5" aria-label="Zoom out">−</button><button class="icb soft" data-act="pr-zoom" data-v="0.5" aria-label="Zoom in">+</button></div>
+      <button class="btn ghost sm" data-act="pr-clear" ${L.items.length ? '' : 'disabled'}>Clear</button>
+      <button class="btn sm" data-act="pr-export" ${L.items.length ? '' : 'disabled'}>${ICON.doc} Export Word</button>
+    </div>
+    <div class="pr-pages" style="--mm:${PR.mm}px">${pagesHtml}</div>
+  </section></div>`;
+}
+function prDims(img) {
+  const i = +img.dataset.fi, x = S.lay?.items[i]; if (!x || !img.naturalWidth) return;
+  const box = x.full ? PR_BOX.full : PR_BOX.half, k = Math.min(box.w / img.naturalWidth, box.h / img.naturalHeight) * (x.size || 100) / 100;
+  const el = document.querySelector(`[data-dim="${i}"]`); if (el) el.textContent = `${(img.naturalWidth * k / 10).toFixed(1)} × ${(img.naturalHeight * k / 10).toFixed(1)} cm`;
+}
+function prAfter() {
+  const sd = $('.pr-side'); if (sd) sd.scrollTop = PR.sideTop;
+  document.querySelectorAll('.pr-fig img').forEach(img => { if (img.complete) prDims(img); img.addEventListener('load', () => prDims(img)); });
+  document.querySelectorAll('.pr-fig img[data-rpid]').forEach(img => prRotPreview(img).catch(e => toast(e.message || String(e))));
+}
+function prAdd(pids, at) {
+  const L = S.lay, have = new Set(L.items.map(x => x.pid)), add = pids.filter(p => !have.has(p)).map(pid => ({ pid, size: 100 }));
+  if (!add.length) { toast(pids.length > 1 ? 'Those pictures are already in the report.' : 'That picture is already in the report.'); return; }
+  L.items.splice(at == null ? L.items.length : at, 0, ...add); prSave(); render();
+}
+function prCompPids(cid) { const insp = Store.get('inspections', S.layId), b = Store.get('bridges', insp.bridgeId); return Object.values(prPics(insp, b)).filter(p => cid ? p.cid === cid : !p.c).map(p => p.pid); }
+Object.assign(A, {
+  'open-layout'(d) { nav({ name: 'layout', id: d.id || '' }); },
+  'pr-toggle'(d) { PR.open.has(d.k) ? PR.open.delete(d.k) : PR.open.add(d.k); render(); },
+  'pr-add'(d) { prAdd([d.pid]); },
+  'pr-addcomp'(d) { prAdd(prCompPids(d.cid)); },
+  'pr-addall'() { const insp = Store.get('inspections', S.layId), b = Store.get('bridges', insp.bridgeId); prAdd(Object.keys(prPics(insp, b))); },
+  'pr-del'(d) { S.lay.items.splice(+d.idx, 1); prSave(); render(); },
+  'pr-rot'(d) { const x = S.lay.items[+d.idx]; x.rot = ((x.rot || 0) + +d.v) % 360; if (!x.rot) delete x.rot; prSave(); render(); },
+  'pr-full'(d) { const x = S.lay.items[+d.idx]; x.full = !x.full; prSave(); render(); },
+  'pr-move'(d) { const L = S.lay.items, i = +d.idx, j = i + +d.v; if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; prSave(); render(); },
+  'pr-reset'(d) { delete S.lay.items[+d.idx].cap; prSave(); render(); },
+  'pr-clear'() { if (!confirm('Remove all pictures from this report layout? (The photos themselves are not deleted.)')) return; S.lay.items = []; prSave(); render(); },
+  'pr-zoom'(d) { PR.mm = Math.min(6, Math.max(1.5, PR.mm + +d.v)); const p = $('.pr-pages'); if (p) p.style.setProperty('--mm', PR.mm + 'px'); },
+  'pr-export'() { prExport(); },
+});
+// Typing and sliders update in place (no re-render, so the cursor stays put).
+document.addEventListener('input', e => {
+  const t = e.target; if (S.route.name !== 'layout' || !S.lay) return;
+  if (t.matches('.pr-cap')) {
+    S.lay.items[+t.dataset.idx].cap = t.textContent.replace(/\s+/g, ' ').trim(); prSave();
+    if (!t.parentNode.querySelector('.pr-reset')) t.insertAdjacentHTML('afterend', ` <button class="pr-reset" data-act="pr-reset" data-idx="${t.dataset.idx}" title="Use the automatic description" aria-label="Use the automatic description">↺</button>`);
+  }
+  else if (t.dataset.pr === 'size') { const x = S.lay.items[+t.dataset.idx]; x.size = +t.value; const img = document.querySelector(`.pr-fig img[data-fi="${t.dataset.idx}"]`); if (img) { img.style.cssText = prImgStyle(x); prDims(img); } prSave(); }
+  else if (t.dataset.pr === 'title') { S.lay.title = t.value; document.querySelectorAll('[data-head]').forEach(h => h.textContent = t.value); prSave(); }
+});
+document.addEventListener('change', e => { if (e.target.dataset.pr === 'insp') { PR.open.clear(); nav({ name: 'layout', id: e.target.value }, true); } });
+document.addEventListener('keydown', e => { if (e.target.matches?.('.pr-cap') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+// Drag and drop
+function prClearOver() { document.querySelectorAll('.over,.over-top,.over-bot').forEach(el => el.classList.remove('over', 'over-top', 'over-bot')); }
+function prDropAt(e) {
+  const el = e.target.closest?.('[data-drop]'); if (!el) return e.target.closest?.('.pr-pages') ? { el: null, at: null } : null;
+  if (el.dataset.drop === 'end') return { el, at: null, cls: 'over' };
+  const r = el.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+  return { el, at: +el.dataset.drop + (after ? 1 : 0), cls: after ? 'over-bot' : 'over-top' };
+}
+document.addEventListener('dragstart', e => {
+  if (S.route.name !== 'layout') return;
+  const th = e.target.closest?.('[data-dpid]'), eh = e.target.closest?.('[data-dcomp]'), fg = e.target.closest?.('.pr-fig');
+  if (th) PR.drag = { pids: [th.dataset.dpid] };
+  else if (eh) PR.drag = { pids: prCompPids(eh.dataset.dcomp) };
+  else if (fg && !e.target.closest('.pr-ft,.pr-cap')) PR.drag = { move: +fg.dataset.idx };
+  else { PR.drag = null; return; }
+  e.dataTransfer.effectAllowed = 'copyMove'; e.dataTransfer.setData('text/plain', 'bsi-picture');
+  (fg || th)?.classList.add('dragging');
+});
+document.addEventListener('dragover', e => {
+  if (!PR.drag) return; const d = prDropAt(e); prClearOver(); if (!d) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = PR.drag.move != null ? 'move' : 'copy'; if (d.el) d.el.classList.add(d.cls);
+});
+document.addEventListener('drop', e => {
+  if (!PR.drag) return; const d = prDropAt(e), drag = PR.drag; PR.drag = null; prClearOver(); if (!d) return;
+  e.preventDefault();
+  if (drag.move != null) {
+    const L = S.lay.items, from = drag.move; let to = d.at == null ? L.length : d.at;
+    if (to > from) to--; if (to === from) return render();
+    const [x] = L.splice(from, 1); L.splice(to, 0, x); prSave(); render();
+  } else prAdd(drag.pids, d.at);
+});
+document.addEventListener('dragend', () => { PR.drag = null; prClearOver(); document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging')); });
+
+async function prExport() {
+  const insp = Store.get('inspections', S.layId), b = insp && Store.get('bridges', insp.bridgeId), L = S.lay; if (!b || !L.items.length) return;
+  toast('Building Word document…');
+  try {
+    const pics = prPics(insp, b), pages = prPages(L.items), rels = [], media = []; let body = '', n = 0, missing = 0;
+    for (const [pi, pg] of pages.entries()) {
+      for (const [k, { x }] of pg.list.entries()) {
+        let blob = await Store.photoBlob(x.pid); if (!blob) { missing++; continue; }
+        if (x.rot) blob = await rotBlob(blob, x.rot);
+        const sz = await imgSize(blob), box = x.full ? PR_BOX.full : PR_BOX.half, s = Math.min(box.w / sz.w, box.h / sz.h) * (x.size || 100) / 100;
+        const cx = Math.round(sz.w * s * 36000), cy = Math.round(sz.h * s * 36000), nid = ++n, rid = 'rIdImg' + nid, file = pics[x.pid].name + '.jpg';
+        rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/picture${nid}.jpeg"/>`);
+        media.push(blob);
+        body += `<w:p><w:pPr>${pi > 0 && k === 0 ? '<w:pageBreakBefore/>' : ''}<w:keepNext/><w:jc w:val="center"/><w:spacing w:before="0" w:after="60"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${nid}" name="Picture ${nid}" descr="${xe(file)}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${nid}" name="${xe(file)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+        body += `<w:p><w:pPr><w:pStyle w:val="Caption"/><w:spacing w:before="0" w:after="240"/></w:pPr>${wRun('Picture ')}<w:fldSimple w:instr=" SEQ Picture \\* ARABIC "><w:r><w:rPr><w:b/></w:rPr><w:t>${nid}</w:t></w:r></w:fldSimple>${wRun(': ' + prCap(x, pics))}</w:p>`;
+      }
+    }
+    const title = (L.title || '').trim();
+    const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document ${NS} xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}
+<w:sectPr>${title ? '<w:headerReference w:type="default" r:id="rIdHdr"/>' : ''}<w:footerReference w:type="default" r:id="rIdFtr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="454" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    const z = new JSZip();
+    z.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
+    z.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    z.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdHdr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdFtr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${rels.join('')}</Relationships>`);
+    z.file('word/styles.xml', DOCX_STYLES);
+    z.file('word/header1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>${wP(wRun(title || ' ', '<w:color w:val="555555"/><w:sz w:val="18"/>'), '<w:jc w:val="center"/><w:spacing w:after="0"/>')}</w:hdr>`);
+    z.file('word/footer1.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}><w:p><w:pPr><w:jc w:val="right"/><w:spacing w:after="0"/></w:pPr><w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple></w:p></w:ftr>`);
+    z.file('word/document.xml', doc);
+    for (let i = 0; i < media.length; i++) z.file(`word/media/picture${i + 1}.jpeg`, await fitPhoto(media[i], WORD_MAX_BYTES));
+    const blob = await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' });
+    const fname = `${pkgName(insp, b)}_Pictures.docx`;
+    if (isIOS() || isAndroid()) offerFile(fname, blob); else { downloadBlob(blob, fname); toast(`Saved ${fname} to Downloads.`); }
+    if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
+  } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
+}
+document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
+document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
+window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { flushDraft(); flushReview(); } });
+
+/* ---------- Photos: downscale, store on device, tag GPS ---------- */
+/* The phone keeps every photo at its original size. Copies are shrunk only where size matters:
+   the Google Drive upload (5 MB max) and the pictures inside the Word report (2 MB max).
+   Shrinking tries full resolution at high quality first, then lower quality, then smaller size. */
+const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;   // Google Drive copy
+const WORD_MAX_BYTES = 2 * 1024 * 1024;     // picture inside the Word report
+const CANVAS_MAX_PX = 16e6;                 // iPhone Safari cannot draw a larger canvas
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That file is not a readable image.')); };
+    img.src = url;
+  });
+}
+// Re-encode as JPEG no bigger than maxBytes. Returns the input untouched when it already fits.
+async function fitPhoto(file, maxBytes = UPLOAD_MAX_BYTES) {
+  if (file.size <= maxBytes && file.type === 'image/jpeg') return file;
+  const img = await loadImage(file), W = img.naturalWidth, H = img.naturalHeight;
+  let dim = Math.round(Math.max(W, H) * Math.min(1, Math.sqrt(CANVAS_MAX_PX / (W * H)))), q = 0.92, blob = null;
+  for (let i = 0; i < 12; i++) {
+    const k = dim / Math.max(W, H), c = document.createElement('canvas');
+    c.width = Math.round(W * k); c.height = Math.round(H * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q));
+    if (!blob) throw new Error('Could not read photo');
+    if (blob.size <= maxBytes) return blob;
+    if (q > 0.72) q = Math.round((q - 0.06) * 100) / 100; else dim = Math.round(dim * 0.85);
+  }
+  return blob;
+}
+// The phone keeps the photo at its original size. Only a photo the browser cannot show as a
+// JPEG (e.g. PNG, HEIC on some Androids) is converted, at full resolution.
+async function originalPhoto(file) {
+  if (file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name || '')) { await loadImage(file); return file.type === 'image/jpeg' ? file : new Blob([file], { type: 'image/jpeg' }); }
+  return fitPhoto(file, Infinity);
+}
+async function onPhotos(files) {
+  if (!files || !files.length || !photoTarget) return;
+  const inspId = S.route.id, tgt = photoTarget; photoTarget = null;
+  const added = [];
+  for (const f of files) {
+    try {
+      Store.pending++; Store.status();
+      const blob = await originalPhoto(f), id = await Store.savePhoto(blob, inspId);
+      const t = now();
+      await Store.patch('inspections', inspId, { photos: { [id]: { componentId: tgt.cid, takenAt: t, updatedAt: t } } });
+      added.push(id);
+      // Camera shots are not in the iPhone Photos app yet: keep them ready to hand over when Done is tapped.
+      if (tgt.camera) S.newPhotos.push({ id, blob, inspId, cid: tgt.cid });
+    } catch (e) { Store.setError('Photo not saved: ' + (e.message || e)); }
+    finally { Store.pending--; Store.status(); }
+  }
+  render(); if (added.length > 1) toast(`${added.length} photos added.`);
+  if (added.length && lsGet('bsi-gps', true)) getFix(8000).then(fix => { if (fix) Store.patch('inspections', inspId, { photos: Object.fromEntries(added.map(id => [id, { lat: fix.lat, lng: fix.lng, acc: fix.acc }])) }); });
+}
+$('#photo-in').addEventListener('change', e => onPhotos(e.target.files));
+$('#photo-lib').addEventListener('change', e => onPhotos(e.target.files));
+
+/* =========================================================================
+   Handing files to the user: iPhone/Android share sheet (Files, OneDrive, SharePoint, Mail…),
+   or a normal download on a computer. Sharing needs a fresh tap, so a ready file waits in a sheet.
+   ========================================================================= */
+let ready = null;
+const canShareFiles = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
+function showSheet(title, size, note, button) {
+  const sh = $('#sheet');
+  sh.innerHTML = `<div class="sheet-in"><div class="row between"><b class="grow" style="overflow-wrap:anywhere">${esc(title)}</b>${size ? `<span class="sub">${size}</span>` : ''}</div>
+    <span class="sub">${note}</span>
+    <div class="row"><button class="btn grow" data-act="sheet-share">${ICON.share} ${button}</button><button class="btn ghost" data-act="sheet-close">Close</button></div></div>`;
+  sh.hidden = false;
+}
+function offerFile(name, blob) {
+  const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+  ready = { name, blob, files: [file] };
+  if (canShareFiles([file])) { showSheet(name, fmtSize(blob.size), 'Ready. Share it to Files, OneDrive, SharePoint, Mail or AirDrop.', 'Share / Save'); return; }
+  if (isAndroid()) { ready.download = true; showSheet(name, fmtSize(blob.size), 'Ready. It saves to <b>Downloads</b>. Open it from the notification or the Files app, or share it from there to Drive, OneDrive or email.', 'Save to phone'); return; }
+  downloadReady();
+}
+function downloadBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 15000);
+}
+function saveImagesToDevice(files) {
+  files.forEach((f, i) => setTimeout(() => downloadBlob(f, f.name), i * 450));
+  toast(`${files.length} photo${files.length > 1 ? 's' : ''} saved to Downloads (Gallery / Google Photos).`);
+}
+/* Photos to the iPhone Photos app: the share sheet's "Save Image(s)" puts them in the camera roll;
+   "Save to Files" keeps the component file names. */
+function offerPhotos(pics, auto) {
+  const files = pics.map(x => new File([x.blob], x.file, { type: 'image/jpeg' }));
+  if (files.length && isAndroid()) { saveImagesToDevice(files); return; }
+  if (!files.length || !canShareFiles(files)) { if (!auto) toast('Saving to Photos needs the iPhone or Android share sheet.'); return; }
+  ready = { name: files.length === 1 ? files[0].name : `${files.length} photos`, files, photos: true };
+  const one = files.length === 1;
+  showSheet(one ? `Save ${files[0].name} to Photos?` : `Save ${files.length} pictures to Photos?`, fmtSize(files.reduce((a, f) => a + f.size, 0)),
+    `Tap the button, then <b>Save Image${one ? '' : 's'}</b> to keep ${one ? 'it' : 'them'} in the Photos app, or <b>Save to Files</b> to keep the component file names.`, one ? 'Save to Photos' : `Save ${files.length} to Photos`);
+}
+async function shareReady() {
+  if (!ready) return;
+  if (ready.download) { downloadReady(); return; }
+  try { await navigator.share({ files: ready.files, title: ready.name }); closeSheet(); if (ready?.photos) toast('Shared.'); }
+  catch (e) { if (e && e.name === 'AbortError') return; if (ready.photos) { toast('Could not open the share sheet.'); return; } downloadReady(); }
+}
+function downloadReady() {
+  if (!ready || ready.photos) return;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(ready.blob); a.download = ready.name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+  toast('Saved ' + ready.name); closeSheet();
+}
+function closeSheet() { $('#sheet').hidden = true; $('#sheet').innerHTML = ''; }
+
+/* =========================================================================
+   Exports: Word report, pictures, JSON, full backup
+   ========================================================================= */
+function findingOf(it) { it = it || {}; return it.na ? 'Not accessible' : (it.defects || []).length ? it.defects.join(', ') : it.none ? 'No defects observed' : ''; }
+function captionOf(c, it) {
+  const where = c ? [locFull(c.loc), compFull(c)].filter(Boolean).join(' ') : 'Photo';
+  const desc = (it?.comment || '').trim().replace(/\s*\n+\s*/g, '; ') || findingOf(it) || 'No defects observed';
+  return `${where} - ${desc}`;
+}
+function orderedPhotos(insp, b) {
+  const ix = Object.fromEntries(b.components.map((c, i) => [c.id, i]));
+  return photosOf(insp).sort((x, y) => (ix[x.componentId] ?? 1e9) - (ix[y.componentId] ?? 1e9) || String(x.takenAt).localeCompare(String(y.takenAt)));
+}
+function imgSize(blob) {
+  return new Promise(res => { const u = URL.createObjectURL(blob), im = new Image();
+    im.onload = () => { res({ w: im.naturalWidth || 4, h: im.naturalHeight || 3 }); URL.revokeObjectURL(u); };
+    im.onerror = () => { res({ w: 4, h: 3 }); URL.revokeObjectURL(u); }; im.src = u; });
+}
+async function collectPictures(insp, b) {
+  const names = photoNames(insp, b), compBy = Object.fromEntries(b.components.map(c => [c.id, c])), I = itemsOf(insp);
+  const out = []; let missing = 0, n = 0;
+  for (const p of orderedPhotos(insp, b)) {
+    const blob = await Store.photoBlob(p.id); if (!blob) { missing++; continue; }
+    const c = compBy[p.componentId], it = c ? I[c.id] : null;
+    out.push({ p, blob, size: await imgSize(blob), n: ++n, file: names[p.id] + '.jpg', c, it, caption: captionOf(c, it) });
+  }
+  return { pics: out, missing };
+}
+const csvCell = v => /[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? '');
+function jsonData(id) {
+  const insp = Store.get('inspections', id), b = Store.get('bridges', insp.bridgeId);
+  return { exportedAt: now(), bridge: { id: insp.bridgeId, ...b }, inspection: { id, ...insp, photoFiles: photoNames(insp, b) } };
+}
+function exportJson(id) { const insp = Store.get('inspections', id), b = Store.get('bridges', insp.bridgeId); offerFile(`${pkgName(insp, b)}.json`, new Blob([JSON.stringify(jsonData(id), null, 2)], { type: 'application/json' })); }
+
+/* ---------- Word report (.docx), written as Office Open XML ---------- */
+const xe = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const wRun = (t, rpr = '') => `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ''}<w:t xml:space="preserve">${xe(t)}</w:t></w:r>`;
+const wP = (inner, ppr = '') => `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ''}${inner}</w:p>`;
+const wStyled = (t, style) => wP(wRun(t), `<w:pStyle w:val="${style}"/>`);
+function wTable(widths, head, rows, fills) {
+  const cell = (t, w, isHead, fill) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ''}</w:tcPr>${String(t ?? '').split('\n').map(line => wP(wRun(line, isHead ? '<w:b/>' : ''), '<w:spacing w:before="30" w:after="30"/>')).join('')}</w:tc>`;
+  return `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="${widths.reduce((a, x) => a + x, 0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+    <w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>
+    ${head ? `<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${head.map((h, i) => cell(h, widths[i], true, 'E3E7E4')).join('')}</w:tr>` : ''}
+    ${rows.map((r, ri) => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map((t, i) => cell(t, widths[i], false, fills && fills[ri] && fills[ri][i])).join('')}</w:tr>`).join('')}</w:tbl>`;
+}
+const DOCX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault>
+<w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="60"/></w:pPr><w:rPr><w:b/><w:sz w:val="34"/><w:szCs w:val="34"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="300" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:jc w:val="center"/><w:spacing w:before="60" w:after="300"/></w:pPr><w:rPr><w:b/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
+<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:left w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:right w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/></w:tblBorders></w:tblPr></w:style>
+</w:styles>`;
+async function buildDocx(id, collected) {
+  const insp = Store.get('inspections', id), b = Store.get('bridges', insp.bridgeId), T = TEMPLATES[typeOf(b)], I = itemsOf(insp);
+  const { pics } = collected || await collectPictures(insp, b);
+  const t = tally(insp, b), picsBy = {};
+  pics.forEach(x => (picsBy[x.p.componentId] = picsBy[x.p.componentId] || []).push(x.n));
+  let body = '';
+  body += wStyled(`${T.name} ${b.bridgeNo} - ${LEVELS[insp.level]} inspection`, 'Title');
+  body += wP(wRun([b.road, b.slk && 'SLK ' + b.slk, b.region].filter(Boolean).join(' · ') || ' ', '<w:color w:val="4F5B55"/>'));
+  const info = [
+    ['Project number', b.project || '-'],
+    ['Structure', factsOf(b).map(([k, v]) => `${k}: ${v}`).join('; ')],
+    ['GPS', b.gps ? `${b.gps.lat}, ${b.gps.lng}` : '-'],
+    ['Inspector', insp.inspector || '-'],
+    ['Inspection date', `${fmtDate(insp.startedAt)}${insp.status === 'complete' ? '' : ' (draft, in progress)'}`],
+    ['Findings', `${t.done} of ${t.total} components inspected; ${t.def} with defects; ${t.ok} no defects; ${t.na} not accessible; ${pics.length} pictures`],
+  ];
+  body += wTable([2400, 7238], null, info, info.map(() => ['F1F3F1']));
+  if (insp.summary) { body += wStyled('Inspection summary', 'Heading1'); insp.summary.split(/\n+/).forEach(l => body += wP(wRun(l))); }
+  body += wStyled('Summary table', 'Heading1');
+  const rows = [], fills = [];
+  b.components.forEach((c, i) => {
+    const it = I[c.id] || {}, f = findingOf(it);
+    rows.push([String(i + 1), locFull(c.loc) || 'General', compFull(c), f || (it.comment || picsBy[c.id] ? 'See comments' : 'Not recorded'), it.comment || '', (picsBy[c.id] || []).map(n => 'Picture ' + n).join('\n')]);
+    fills.push([null, null, null, it.na ? 'E3E7E4' : (it.defects || []).length ? 'F6D2B8' : it.none ? 'DCEFE4' : null, null, null]);
+  });
+  body += wTable([520, 1180, 1900, 2250, 2588, 1200], ['No.', 'Location', 'Component', 'Defects observed', 'Comments', 'Pictures'], rows, fills);
+  const rels = [];
+  if (pics.length) {
+    body += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>` + wStyled('Photographs', 'Heading1');
+    const maxW = 16 * 360000, maxH = 11.5 * 360000;
+    pics.forEach((x, i) => {
+      const k = Math.min(maxW / x.size.w, maxH / x.size.h), cx = Math.round(x.size.w * k), cy = Math.round(x.size.h * k), rid = 'rIdImg' + (i + 1), nid = i + 1;
+      rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/picture${nid}.jpeg"/>`);
+      body += `<w:p><w:pPr><w:keepNext/><w:jc w:val="center"/><w:spacing w:before="120" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${nid}" name="Picture ${nid}" descr="${xe(x.file)}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${nid}" name="${xe(x.file)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+      body += `<w:p><w:pPr><w:pStyle w:val="Caption"/></w:pPr>${wRun('Picture ')}<w:fldSimple w:instr=" SEQ Picture \\* ARABIC "><w:r><w:rPr><w:b/></w:rPr><w:t>${x.n}</w:t></w:r></w:fldSimple>${wRun(': ' + x.caption)}</w:p>`;
+    });
+  }
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const z = new JSZip();
+  z.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`);
+  z.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  z.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${rels.join('')}</Relationships>`);
+  z.file('word/styles.xml', DOCX_STYLES);
+  z.file('word/document.xml', doc);
+  for (let i = 0; i < pics.length; i++) z.file(`word/media/picture${i + 1}.jpeg`, await fitPhoto(pics[i].blob, WORD_MAX_BYTES));
+  return { name: `${pkgName(insp, b)}${insp.status === 'complete' ? '' : '-draft'}.docx`, blob: await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' }) };
+}
+async function makeDocx(id) {
+  toast('Building Word report…');
+  try { const r = await buildDocx(id); offerFile(r.name, r.blob); }
+  catch (e) { console.error(e); toast('Word report failed: ' + (e.message || e)); }
+}
+async function exportPackage(id, photosOnly) {
+  const insp = Store.get('inspections', id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
+  toast(photosOnly ? 'Collecting pictures…' : 'Building export…');
+  try {
+    const root = pkgName(insp, b) + (insp.status === 'complete' ? '' : '-draft') + (photosOnly ? '_Photos' : '');
+    const zip = new JSZip(), dir = zip.folder(root), pf = photosOnly ? dir : dir.folder('Photos');
+    const collected = await collectPictures(insp, b);
+    const rows = [['Picture', 'File', 'Caption', 'Component ID', 'Location', 'Component', 'Defects observed', 'Comments', 'Taken', 'Latitude', 'Longitude']];
+    for (const x of collected.pics) {
+      pf.file(x.file, x.blob);
+      rows.push([x.n, x.file, `Picture ${x.n}: ${x.caption}`, x.c ? x.c.code : '', x.c ? locFull(x.c.loc) || 'General' : '', x.c ? compFull(x.c) : '', findingOf(x.it), x.it?.comment || '', x.p.takenAt ? new Date(x.p.takenAt).toLocaleString('en-AU') : '', x.p.lat ?? '', x.p.lng ?? '']);
+    }
+    dir.file('Picture index.csv', '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n'));
+    if (!photosOnly) {
+      const d = await buildDocx(id, collected); dir.file(d.name, d.blob);
+      dir.file(root + '.json', JSON.stringify(jsonData(id), null, 2));
+    }
+    offerFile(root + '.zip', await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' }));
+    if (collected.missing) toast(`${collected.missing} photo${collected.missing > 1 ? 's' : ''} could not be read and were left out.`);
+  } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e)); }
+}
+
+/* ---------- Full backup and restore ---------- */
+async function backupAll() {
+  toast('Building backup…');
+  try {
+    const day = now().slice(0, 10), root = `BridgeInspect-backup-${day}`, zip = new JSZip(), dir = zip.folder(root), pd = dir.folder('photos');
+    const data = { app: 'bridge-site-inspection', version: 1, exportedAt: now(), bridges: Store.cache.bridges, inspections: Store.cache.inspections };
+    let n = 0;
+    for (const id of await IDB.keys('photos')) { const r = await IDB.get('photos', id); if (r?.blob) { pd.file(id + '.jpg', r.blob); n++; } }
+    dir.file('data.json', JSON.stringify(data, null, 1));
+    offerFile(root + '.zip', await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' }));
+    toast(`Backup ready: ${Object.keys(data.bridges).length} bridges, ${Object.keys(data.inspections).length} inspections, ${n} photos.`);
+  } catch (e) { console.error(e); toast('Backup failed: ' + (e.message || e)); }
+}
+$('#restore-in').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try {
+    const z = await JSZip.loadAsync(f), dj = z.file(/(^|\/)data\.json$/)[0];
+    if (!dj) throw new Error('This is not a Bridge Site Inspection backup (no data.json inside).');
+    const data = JSON.parse(await dj.async('string'));
+    if (data.app !== 'bridge-site-inspection') throw new Error('This file is not a backup from this app.');
+    const photos = z.file(/(^|\/)photos\/[^/]+\.jpg$/);
+    S.restore = { data, zip: z, photoFiles: photos, photos: photos.length };
+  } catch (err) { S.restore = { error: 'Could not read that backup: ' + (err.message || err) }; }
+  render();
+});
+async function applyRestore() {
+  const r = S.restore; if (!r || r.error) return;
+  toast('Restoring…');
+  try {
+    for (const pf of r.photoFiles) { const id = pf.name.split('/').pop().replace(/\.jpg$/, ''); await IDB.put('photos', id, { blob: await pf.async('blob').then(b => new Blob([b], { type: 'image/jpeg' })), at: now() }); }
+    for (const [id, v] of Object.entries(r.data.bridges || {})) await IDB.put('bridges', id, v);
+    for (const [id, v] of Object.entries(r.data.inspections || {})) await IDB.put('inspections', id, v);
+    const keep = m => Object.fromEntries(Object.entries(m).filter(([, v]) => v && !v._deleted));
+    Store.cache.bridges = keep(await IDB.all('bridges')); Store.cache.inspections = keep(await IDB.all('inspections'));
+    await Sync.queueAll();
+    S.restore = null; render(); toast('Backup restored.'); Sync.soon(1000);
+  } catch (e) { console.error(e); Store.setError('Restore failed: ' + (e.message || e)); }
+}
+
+/* ---------- Android install prompt ---------- */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (S.route.name === 'home') render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Bridge Inspect from your home screen.'); if (S.route.name === 'home') render(); });
+
+/* ---------- Boot ---------- */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline mode not available:', e));
+Store.init().then(() => { render(); Sync.soon(800); }).catch(e => { console.error(e); $('#view').innerHTML = `<div class="card warn"><b>This browser blocked on-device storage.</b><span class="sub">${esc(e.message || e)}. Turn off private browsing, or open the installed app from its home-screen icon.</span></div>`; });
+</script>
+</body>
+</html>
