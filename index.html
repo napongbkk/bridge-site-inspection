@@ -1,0 +1,1052 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#EDEFEC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121815" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bridge Inspect">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Bridge Site Inspection</title>
+<style>
+/* Layout: one-column field app, max 760px, sticky app bar; high contrast for sunlight. System fonts so it works offline. */
+:root{
+  --bg:#EDEFEC; --card:#FFFFFF; --ink:#17201B; --muted:#4F5B55; --line:#D5DAD6; --well:#DDE1DE;
+  --accent:#B8430D; --accent-ink:#FFFFFF; --danger:#9E2A22; --field:#FFFFFF; --field-line:#C9CFCB; --press:#F6F7F5;
+  --ok:#CFE6D8; --ok-ink:#17201B; --def:#E9965A; --def-ink:#17201B;
+  --sans:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121815; --card:#1B231F; --ink:#E9EEEA; --muted:#A7B3AC; --line:#2D3832; --well:#26302B;
+  --accent:#F08A4B; --accent-ink:#1A0F08; --danger:#E0655B; --field:#141B17; --field-line:#3A4640; --press:#222B26;
+  --ok:#2F5A44; --ok-ink:#E3F2E9; --def:#C9773F; --def-ink:#1A0F08;
+  color-scheme:dark }}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%}
+img{max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.bar-in{max-width:760px;margin:0 auto;padding:8px max(16px, env(safe-area-inset-right,0px)) 8px max(16px, env(safe-area-inset-left,0px));display:flex;align-items:center;gap:8px;min-height:56px}
+.bar h1{flex:1;margin:0;font-size:17px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.save[data-s="saving"] .dot{background:#E4C65A} .save[data-s="error"] .dot{background:var(--danger)}
+main{max-width:760px;margin:0 auto;padding:16px max(16px, env(safe-area-inset-right,0px)) calc(72px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+h2.big{margin:0;font-size:26px;font-weight:700;letter-spacing:-.4px;text-wrap:balance}
+h2.hero{margin:0;font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.1;text-wrap:balance}
+.sub{font-size:13px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card.hot{border:2px solid var(--accent)}
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.sec-h h3{margin:0;font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.btn{min-height:48px;padding:0 16px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;text-decoration:none}
+.btn.dark{background:var(--ink);color:var(--bg)} .btn.out{background:var(--card);color:var(--ink);border:1.5px solid var(--ink)}
+.btn.ghost{background:transparent;color:var(--ink)} .btn.danger{background:var(--danger);color:#fff}
+.btn.sm{min-height:38px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.tap:focus-visible,.back:focus-visible,.tile:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.back{min-height:44px;padding:0 6px;border:0;background:transparent;color:var(--accent);font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:2px}
+.seg{display:flex;gap:4px;padding:4px;background:var(--well);border-radius:12px}
+.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;font-size:14px;cursor:pointer;padding:0 6px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:40px;padding:0 13px;border-radius:20px;border:1px solid var(--field-line);background:var(--card);font-size:14px;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+.chips.loc .chip{min-height:38px;padding:0 11px;font-size:13.5px}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:600}
+.chip.okc[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--ok-ink)}
+.chip.nac[aria-pressed="true"]{background:var(--well);border-color:var(--muted);color:var(--ink)}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:4px 8px;border-radius:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well)} .b-note{background:var(--well)}
+.b-todo{border:1.5px solid var(--accent);color:var(--accent)}
+.pill{font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px;background:var(--well);white-space:nowrap}
+.pill.hot{background:var(--accent);color:var(--accent-ink)}
+label.f{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+label.f span{font-size:13px;color:var(--muted);font-weight:500}
+input.in,select.in,textarea.in{min-height:48px;border-radius:12px;border:1px solid var(--field-line);background:var(--field);padding:0 14px;font-size:16px;width:100%}
+textarea.in{min-height:96px;padding:12px 14px;resize:vertical}
+input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.tap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:60px;cursor:pointer}
+.tap:hover{background:var(--press)}
+.tap.just{border:2px solid var(--accent);background:var(--press)}
+.code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--muted);width:60px;flex:0 0 auto}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.facts div{background:var(--card);padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.facts b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+@media (min-width:640px){.facts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex} .prog i{display:block;height:100%}
+.step{display:flex;align-items:center;gap:10px;min-height:52px}
+.step span.l{flex:1}
+.step button{width:44px;height:44px;border-radius:10px;border:1px solid var(--field-line);background:var(--press);font-size:22px;cursor:pointer}
+.step b{width:32px;text-align:center;font-family:var(--mono);font-size:18px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:340px){.tiles{grid-template-columns:minmax(0,1fr)}}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;cursor:pointer;min-height:150px}
+.tile:hover{border-color:var(--ink)}
+.tile svg{color:var(--accent)}
+.tile b{font-size:17px}
+.tile .go{margin-top:auto;font-size:13px;font-weight:600;color:var(--accent)}
+.tico{color:var(--muted);display:inline-flex}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.ph{position:relative;aspect-ratio:1;max-width:100%;border-radius:10px;overflow:hidden;background:var(--well)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .pname{position:absolute;left:0;right:0;bottom:0;padding:3px 5px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--mono);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph button{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:15px;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:16px;line-height:1}
+.warn{border:1.5px solid var(--accent)}
+.confirm{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-radius:12px;background:var(--well)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+.stick{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.15);padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+.sheet-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="bar-in">
+  <button class="back" id="back" data-act="back" hidden aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span id="back-l">Back</span></button>
+  <h1 id="title">Bridge Site Inspection</h1>
+  <span class="save" id="save" data-s="ok" role="status"><span class="dot"></span><span id="save-t">Opening…</span></span>
+</div></header>
+<main id="view" aria-live="polite">
+  <div class="card"><b>Opening your inspections…</b><span class="sub">Everything is stored on this device.</span></div>
+</main>
+<div class="sheet" id="sheet" hidden></div>
+<input type="file" id="photo-in" accept="image/*" capture="environment" class="sr" aria-label="Take a photo">
+<input type="file" id="photo-lib" accept="image/*" multiple class="sr" aria-label="Choose photos">
+<input type="file" id="restore-in" accept=".zip,application/zip" class="sr" aria-label="Choose a backup file">
+<div class="toast" id="toast" hidden></div>
+
+<script src="lib/jszip.min.js"></script>
+<script>
+'use strict';
+/* =========================================================================
+   Bridge templates. Each type builds its own component list (numbering in the direction of
+   increasing SLK; piers ascending from A1; piles, girders and columns left to right facing
+   increasing SLK). `ph` = photo file name.
+   ========================================================================= */
+const ICONS = {
+  timber: '<path d="M3 12h58M3 9h58M9 12v24M25 12v24M41 12v24M57 12v24M9 18l16 12M25 18L9 30M41 18l16 12M57 18L41 30"/>',
+  concrete: '<path d="M3 8h58v7H3zM10 15l6 5h32l6-5M22 20v16M42 20v16M17 36h10M37 36h10"/>',
+  steel: '<path d="M3 26h58M3 26L11 8h42l8 18M11 8l8 18 9-18 8 18 9-18 8 18M15 26v10M49 26v10"/>',
+  underpass: '<path d="M3 8h58M3 13h58M14 36V18h36v18M18 36V22h28v14M3 36h58M28 31h8"/>',
+};
+const TEMPLATES = {
+  timber: {
+    name: 'Timber bridge', blurb: 'Stringers, halfcaps, corbels, timber piles, sheeting abutments',
+    params: [['spans', 'Spans', 1, 30, 3], ['stringersPerSpan', 'Stringers per span', 1, 12, 5], ['pilesPerPier', 'Piles per pier', 1, 12, 4], ['abutPiles', 'Piles per abutment', 0, 12, 4]],
+    choices: [['abutType', 'Abutment type', [['sheeting', 'Sill beam + sheeting'], ['bedlog', 'Bedlog']]], ['corbels', 'Corbels at piers', [['yes', 'Yes'], ['no', 'No']]]],
+    defects: ['White rot', 'Brown rot', 'Soft rot', 'Friable timber', 'Termite attack', 'Marine borer', 'Pipe / cavity', 'Splitting', 'Crushing', 'Poor seating', 'Fire damage', 'Weathering', 'Loose / missing fastener', 'Impact damage', 'Debris / vegetation'],
+  },
+  concrete: {
+    name: 'Concrete bridge', blurb: 'Girders or slab deck, headstocks, columns, bearings, joints',
+    params: [['spans', 'Spans', 1, 30, 3], ['girdersPerSpan', 'Girders per span (0 = slab deck)', 0, 20, 4], ['columnsPerPier', 'Columns per pier', 1, 8, 2]],
+    choices: [],
+    defects: ['Cracking', 'Spalling', 'Delamination', 'Exposed reinforcement', 'Corrosion staining', 'Efflorescence / leaching', 'Honeycombing', 'Scaling', 'Abrasion / erosion', 'Water seepage', 'Bearing defect', 'Joint defect', 'Impact damage', 'Scour', 'Debris / vegetation'],
+  },
+  steel: {
+    name: 'Steel bridge', blurb: 'Steel girders, bracing, connections, coating, bearings',
+    params: [['spans', 'Spans', 1, 30, 2], ['girdersPerSpan', 'Steel girders per span', 1, 20, 4], ['columnsPerPier', 'Columns per pier', 1, 8, 2]],
+    choices: [['deckType', 'Deck', [['concrete', 'Concrete'], ['steel', 'Steel'], ['timber', 'Timber']]]],
+    defects: ['Surface corrosion', 'Section loss', 'Coating breakdown', 'Cracking', 'Distortion / buckling', 'Loose / missing bolts or rivets', 'Weld defect', 'Bearing defect', 'Joint defect', 'Impact damage', 'Debris build-up', 'Bird / pest fouling', 'Scour'],
+  },
+  underpass: {
+    name: 'Underpass', blurb: 'Entries, headwalls, walls, roof, floor, joints, drainage, lighting',
+    params: [['units', 'Units / segments', 1, 40, 6]],
+    choices: [['form', 'Structure form', [['box', 'Box units'], ['arch', 'Arch'], ['slab', 'Slab on walls']]]],
+    defects: ['Cracking', 'Spalling', 'Exposed reinforcement', 'Water ingress / seepage', 'Efflorescence / leaching', 'Joint opening / failure', 'Settlement / misalignment', 'Drainage blocked', 'Ponding', 'Lighting fault', 'Graffiti / vandalism', 'Debris / litter', 'Scour at inlet / outlet', 'Impact damage'],
+  },
+};
+const LEVELS = { 1: 'Level 1 · Routine', 2: 'Level 2 · Detailed' };
+const typeOf = b => TEMPLATES[b?.type] ? b.type : 'timber';
+
+function generateComponents(type, l) {
+  const out = []; let order = 0;
+  const add = (loc, code, name, ph) => out.push({ id: code.replace(/\//g, '_'), code, loc, o: order, name, ph });
+  const A = a => 'Abut' + a.slice(1), Sp = s => 'Span' + s.slice(1), Pi = p => 'Pier' + p.slice(1);
+  const walkSpans = (abut, span, pier) => { order++; abut('A1'); for (let s = 1; s <= l.spans; s++) { order++; span('S' + s); if (s < l.spans) { order++; pier('P' + s); } } order++; abut('A2'); };
+
+  if (type === 'timber') {
+    add('GEN', 'GR', 'Guardrail / barriers', 'General_Guardrail');
+    add('GEN', 'AP', 'Approach & expansion joint', 'General_Approach');
+    walkSpans(a => {
+      add(a, a + '-SH', 'Abutment sheeting', A(a) + '_Sheeting');
+      add(a, a + '-WL', 'Wing wall sheeting LHS', A(a) + '_WingLHS');
+      add(a, a + '-WR', 'Wing wall sheeting RHS', A(a) + '_WingRHS');
+      l.abutType === 'bedlog' ? add(a, a + '-BL', 'Bedlog', A(a) + '_Bedlog') : add(a, a + '-SB', 'Sill beam', A(a) + '_SillBeam');
+      add(a, a + '-HC', 'Halfcap', A(a) + '_Halfcap');
+      for (let i = 1; i <= l.abutPiles; i++) add(a, `${a}/${i}`, `Pile ${i}`, `${A(a)}_P${i}`);
+    }, s => {
+      for (let i = 1; i <= l.stringersPerSpan; i++) add(s, `${s}-${i}`, `Stringer ${i}`, `${Sp(s)}_S${i}`);
+      add(s, s + '-DK', 'Deck planks', Sp(s) + '_Deck');
+      add(s, s + '-KL', 'Kerb LHS', Sp(s) + '_KerbLHS');
+      add(s, s + '-KR', 'Kerb RHS', Sp(s) + '_KerbRHS');
+    }, p => {
+      add(p, p + '-HC', 'Halfcap', Pi(p) + '_Halfcap');
+      if (l.corbels !== 'no') add(p, p + '-CB', 'Corbels', Pi(p) + '_Corbels');
+      for (let i = 1; i <= l.pilesPerPier; i++) add(p, `${p}/${i}`, `Pile ${i}`, `${Pi(p)}_P${i}`);
+      add(p, p + '-BR', 'Bracing / walers', Pi(p) + '_Bracing');
+    });
+  } else if (type === 'concrete' || type === 'steel') {
+    const steel = type === 'steel';
+    add('GEN', 'GR', 'Barriers / railings', 'General_Barriers');
+    add('GEN', 'AP', 'Approach slabs', 'General_Approach');
+    add('GEN', 'EJ', 'Expansion joints', 'General_ExpJoints');
+    add('GEN', 'WS', 'Deck wearing surface', 'General_Surface');
+    add('GEN', 'DR', 'Deck drainage', 'General_Drainage');
+    walkSpans(a => {
+      add(a, a + '-AW', 'Abutment wall / headstock', A(a) + '_Wall');
+      add(a, a + '-WL', 'Wing wall LHS', A(a) + '_WingLHS');
+      add(a, a + '-WR', 'Wing wall RHS', A(a) + '_WingRHS');
+      add(a, a + '-BG', 'Bearings', A(a) + '_Bearings');
+      add(a, a + '-FT', 'Footing / piles', A(a) + '_Footing');
+      add(a, a + '-EM', 'Embankment & batter protection', A(a) + '_Embankment');
+    }, s => {
+      for (let i = 1; i <= l.girdersPerSpan; i++) add(s, `${s}-G${i}`, `${steel ? 'Steel girder' : 'Girder'} ${i}`, `${Sp(s)}_G${i}`);
+      if (steel) {
+        add(s, s + '-XB', 'Cross girders / bracing', Sp(s) + '_Bracing');
+        add(s, s + '-CN', 'Connections & splices', Sp(s) + '_Connections');
+        add(s, s + '-DK', { concrete: 'Concrete deck slab', steel: 'Steel deck', timber: 'Timber deck' }[l.deckType || 'concrete'], Sp(s) + '_Deck');
+        add(s, s + '-PC', 'Protective coating', Sp(s) + '_Coating');
+      } else {
+        add(s, s + '-DS', l.girdersPerSpan ? 'Deck slab' : 'Deck slab (soffit)', Sp(s) + '_DeckSlab');
+        if (l.girdersPerSpan) add(s, s + '-DI', 'Diaphragms', Sp(s) + '_Diaphragms');
+      }
+      add(s, s + '-KL', 'Kerb / footway LHS', Sp(s) + '_KerbLHS');
+      add(s, s + '-KR', 'Kerb / footway RHS', Sp(s) + '_KerbRHS');
+    }, p => {
+      add(p, p + '-HS', 'Headstock', Pi(p) + '_Headstock');
+      for (let i = 1; i <= l.columnsPerPier; i++) add(p, `${p}-C${i}`, `Column ${i}`, `${Pi(p)}_C${i}`);
+      add(p, p + '-BG', 'Bearings', Pi(p) + '_Bearings');
+      add(p, p + '-FT', 'Footing / piles', Pi(p) + '_Footing');
+    });
+  } else if (type === 'underpass') {
+    const roof = { box: 'Roof slab', arch: 'Arch barrel', slab: 'Deck soffit' }[l.form || 'box'];
+    add('GEN', 'GR', 'Barriers / handrails', 'General_Barriers');
+    add('GEN', 'LT', 'Lighting', 'General_Lighting');
+    add('GEN', 'SG', 'Signage & clearance markers', 'General_Signage');
+    add('GEN', 'DR', 'Drainage & pumps', 'General_Drainage');
+    const entry = e => { order++; const n = 'Entry' + e.slice(1);
+      add(e, e + '-HW', 'Headwall / portal', n + '_Headwall');
+      add(e, e + '-WL', 'Wing wall LHS', n + '_WingLHS');
+      add(e, e + '-WR', 'Wing wall RHS', n + '_WingRHS');
+      add(e, e + '-AP', 'Approach, ramp & apron', n + '_Approach');
+    };
+    entry('E1');
+    for (let u = 1; u <= l.units; u++) { order++; const U = 'U' + u, n = 'Unit' + u;
+      add(U, U + '-LW', 'Wall LHS', n + '_WallLHS');
+      add(U, U + '-RW', 'Wall RHS', n + '_WallRHS');
+      add(U, U + '-RF', roof, n + '_Roof');
+      add(U, U + '-FL', 'Floor / invert', n + '_Floor');
+      if (u < l.units) add(U, U + '-JT', `Joint to unit ${u + 1}`, n + '_Joint');
+    }
+    entry('E2');
+  }
+  return out;
+}
+const locLabel = l => l === 'GEN' ? 'General' : ({ A: 'Abut ', S: 'Span ', P: 'Pier ', E: 'Entry ', U: 'Unit ' }[l[0]] || '') + l.slice(1);
+const locFull = l => l === 'GEN' ? '' : ({ A: 'Abutment', S: 'Span', P: 'Pier', E: 'Entry', U: 'Unit' }[l[0]] || l[0]) + ' ' + l.slice(1);
+const compFull = c => c.name.replace(/^(Pile|Stringer|Girder|Steel girder|Column) (\d+)$/, '$1 No.$2');
+
+function factsOf(b) {
+  const t = typeOf(b), L = b.layout || {};
+  if (t === 'timber') return [['Type', 'Timber'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Piers', `${L.spans - 1} · ${L.pilesPerPier} piles each`], ['Stringers', `${L.stringersPerSpan} per span`], ['Abutments', L.abutType === 'bedlog' ? 'Bedlog' : 'Sill beam + sheeting'], ['Corbels', L.corbels === 'no' ? 'No' : 'Yes']];
+  if (t === 'underpass') return [['Type', 'Underpass'], ['Units', `${L.units} · Entry 1 → Entry 2`], ['Form', { box: 'Box units', arch: 'Arch', slab: 'Slab on walls' }[L.form || 'box']]];
+  return [['Type', t === 'steel' ? 'Steel' : 'Concrete'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Girders', L.girdersPerSpan ? `${L.girdersPerSpan} per span` : 'Slab deck'], ['Piers', `${L.spans - 1} · ${L.columnsPerPier} column${L.columnsPerPier > 1 ? 's' : ''} each`], ...(t === 'steel' ? [['Deck', { concrete: 'Concrete', steel: 'Steel', timber: 'Timber' }[L.deckType || 'concrete']]] : [])];
+}
+
+/* =========================================================================
+   Utilities
+   ========================================================================= */
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtSize = n => n > 1e9 ? (n / 1e9).toFixed(1) + ' GB' : n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB';
+const isObj = v => v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Blob);
+function deepMerge(t, p) { const o = isObj(t) ? { ...t } : {}; for (const k in p) o[k] = isObj(p[k]) && isObj(o[k]) ? deepMerge(o[k], p[k]) : p[k]; return o; }
+const live = m => Object.entries(m || {}).filter(([, v]) => v != null);
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); }
+const svgI = d => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON = { mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
+const typeIcon = (t, w = 64, h = 40) => `<svg width="${w}" height="${h}" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t]}</svg>`;
+const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/* =========================================================================
+   Storage on this device: IndexedDB stores bridges, inspections and photo files.
+   Nothing leaves the phone until you export.
+   ========================================================================= */
+const IDB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('bridge-site-inspection', 1);
+      r.onupgradeneeded = () => { const d = r.result; ['bridges', 'inspections', 'photos'].forEach(n => { if (!d.objectStoreNames.contains(n)) d.createObjectStore(n); }); };
+      r.onsuccess = () => { this.db = r.result; res(); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  req(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode), q = fn(t.objectStore(store)); let out;
+      if (q) q.onsuccess = () => { out = q.result; };
+      t.oncomplete = () => res(out); t.onerror = t.onabort = () => rej(t.error || new Error('Storage write failed'));
+    });
+  },
+  get(s, k) { return this.req(s, 'readonly', st => st.get(k)); },
+  put(s, k, v) { return this.req(s, 'readwrite', st => st.put(v, k)); },
+  del(s, k) { return this.req(s, 'readwrite', st => st.delete(k)); },
+  keys(s) { return this.req(s, 'readonly', st => st.getAllKeys()); },
+  all(s) {
+    return new Promise((res, rej) => {
+      const out = {}, t = this.db.transaction(s), c = t.objectStore(s).openCursor();
+      c.onsuccess = () => { const cur = c.result; if (cur) { out[cur.key] = cur.value; cur.continue(); } };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error);
+    });
+  },
+};
+const Store = {
+  pending: 0, error: null, persisted: false,
+  cache: { bridges: {}, inspections: {} }, urls: {},
+  async init() {
+    await IDB.open();
+    this.cache.bridges = await IDB.all('bridges');
+    this.cache.inspections = await IDB.all('inspections');
+    try { this.persisted = await navigator.storage?.persisted?.() || false; if (!this.persisted) this.persisted = await navigator.storage?.persist?.() || false; } catch {}
+    this.status();
+  },
+  async run(fn) {
+    this.pending++; this.status();
+    try { await fn(); this.error = null; }
+    catch (e) { this.setError(e && e.name === 'QuotaExceededError' ? 'Phone storage is full. Export and delete old inspections, then try again.' : 'Could not save on this device: ' + (e.message || e)); }
+    finally { this.pending--; this.status(); }
+  },
+  setError(m) { this.error = m; this.status(); toast(m); },
+  status() {
+    const el = $('#save'), t = $('#save-t');
+    if (this.error) { el.dataset.s = 'error'; t.textContent = 'Not saved'; el.title = this.error; return; }
+    el.title = ''; el.dataset.s = this.pending ? 'saving' : 'ok';
+    t.textContent = this.pending ? 'Saving…' : 'Saved on device';
+  },
+  get(col, id) { return this.cache[col][id]; },
+  all(col) { return Object.entries(this.cache[col]).map(([id, v]) => ({ id, ...v })); },
+  put(col, id, data) { this.cache[col] = { ...this.cache[col], [id]: data }; return this.run(() => IDB.put(col, id, data)); },
+  patch(col, id, p) { const v = deepMerge(this.cache[col][id], p); this.cache[col] = { ...this.cache[col], [id]: v }; return this.run(() => IDB.put(col, id, v)); },
+  remove(col, id) { const c = { ...this.cache[col] }; delete c[id]; this.cache[col] = c; return this.run(() => IDB.del(col, id)); },
+  async savePhoto(blob) { const id = uid(); await IDB.put('photos', id, { blob, at: now() }); this.urls[id] = URL.createObjectURL(blob); return id; },
+  photoSrc(id) {
+    if (this.urls[id]) return this.urls[id];
+    IDB.get('photos', id).then(r => { if (!r) return; this.urls[id] = URL.createObjectURL(r.blob); document.querySelectorAll(`img[data-pid="${id}"]`).forEach(img => img.src = this.urls[id]); });
+    return '';
+  },
+  async photoBlob(id) { const r = await IDB.get('photos', id); return r ? r.blob : null; },
+  async removePhoto(id) { try { await IDB.del('photos', id); if (this.urls[id]) { URL.revokeObjectURL(this.urls[id]); delete this.urls[id]; } } catch {} },
+};
+
+/* =========================================================================
+   State, routing, helpers
+   ========================================================================= */
+const S = { route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
+function nav(route, replace) { if (!replace) S.stack.push(S.route); S.route = route; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0); }
+function back() { if (S.route.name === 'component') flushDraft(); S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
+
+function inspectionsFor(bridgeId) { return Store.all('inspections').filter(i => i.bridgeId === bridgeId).sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || '')); }
+const itemsOf = insp => insp.items || {};
+function photosOf(insp, cid) { const all = live(insp.photos).map(([id, p]) => ({ id, ...p })); return cid ? all.filter(p => p.componentId === cid) : all; }
+function statusOf(it, nPhotos) {
+  it = it || {};
+  if (it.na) return { label: 'N/A', cls: 'b-na', done: true };
+  if ((it.defects || []).length) return { label: `${it.defects.length} defect${it.defects.length > 1 ? 's' : ''}`, cls: 'b-def', done: true, def: true };
+  if (it.none) return { label: 'No defects', cls: 'b-ok', done: true };
+  if (it.comment || nPhotos) return { label: 'Noted', cls: 'b-note', done: true };
+  return { label: 'Inspect', cls: 'b-todo', done: false };
+}
+function photoCounts(insp) { const pc = {}; photosOf(insp).forEach(p => pc[p.componentId] = (pc[p.componentId] || 0) + 1); return pc; }
+function tally(insp, b) {
+  const t = { done: 0, def: 0, ok: 0, na: 0, total: b.components.length, photos: photosOf(insp).length }, pc = photoCounts(insp);
+  b.components.forEach(c => { const s = statusOf(itemsOf(insp)[c.id], pc[c.id]); if (s.done) t.done++; if (s.def) t.def++; if (s.cls === 'b-ok') t.ok++; if (s.cls === 'b-na') t.na++; });
+  return t;
+}
+function photoNames(insp, b) {
+  const compBy = Object.fromEntries(b.components.map(c => [c.id, c])), seen = {}, out = {};
+  photosOf(insp).sort((x, y) => String(x.takenAt).localeCompare(String(y.takenAt))).forEach(p => {
+    const c = compBy[p.componentId], base = c ? (c.ph || c.code.replace(/[^A-Za-z0-9]+/g, '_')) : 'Photo';
+    seen[base] = (seen[base] || 0) + 1;
+    out[p.id] = seen[base] === 1 ? base : `${base}_${seen[base]}`;
+  });
+  return out;
+}
+const pkgName = (insp, b) => `${TEMPLATES[typeOf(b)].name.split(' ')[0]}-${String(b.bridgeNo).replace(/[^A-Za-z0-9-]+/g, '')}_L${insp.level}_${(insp.startedAt || '').slice(0, 10)}`;
+
+/* ---------- GPS (works offline: the phone's GPS needs no signal) ---------- */
+function getFix(timeout = 10000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p => res({ lat: +p.coords.latitude.toFixed(6), lng: +p.coords.longitude.toFixed(6), acc: Math.round(p.coords.accuracy) }),
+      () => res(null), { enableHighAccuracy: true, timeout, maximumAge: 60000 });
+  });
+}
+
+/* =========================================================================
+   Views
+   ========================================================================= */
+function setBar(title, backLabel) { $('#title').textContent = title; $('#back').hidden = !backLabel; $('#back-l').textContent = backLabel || ''; }
+function render() {
+  const r = S.route, v = $('#view');
+  try {
+    if (r.name === 'home') v.innerHTML = viewHome();
+    else if (r.name === 'data') v.innerHTML = viewData();
+    else if (r.name === 'add') v.innerHTML = viewAdd();
+    else if (r.name === 'bridge') v.innerHTML = viewBridge(r.id);
+    else if (r.name === 'checklist') v.innerHTML = viewChecklist(r.id);
+    else if (r.name === 'component') v.innerHTML = viewComponent(r.id, r.cid);
+    else if (r.name === 'review') v.innerHTML = viewReview(r.id);
+  } catch (e) { console.error(e); v.innerHTML = `<div class="card warn"><b>Something went wrong showing this screen.</b><span class="sub">${esc(e.message)}</span><button class="btn out" data-act="home">Back to start</button></div>`; }
+  if (S.lastCid && (r.name === 'checklist' || r.name === 'review')) {
+    const row = v.querySelector(`[data-act="open-comp"][data-cid="${CSS.escape(S.lastCid)}"]`);
+    if (row) { row.classList.add('just'); row.scrollIntoView({ block: 'center' }); setTimeout(() => row.classList.remove('just'), 1600); }
+    S.lastCid = null;
+  }
+}
+const gone = () => { setBar('Not found', 'Back'); return '<div class="card"><b>This record no longer exists.</b><button class="btn out" data-act="home">Back to start</button></div>'; };
+
+/* ---------- Landing ---------- */
+function viewHome() {
+  setBar('Bridge Site Inspection');
+  const install = isStandalone() ? '' : `<div class="card warn"><b>Install on this phone to use it with no signal</b>
+    <span>${isIOS() ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>. Open the app from the new icon from then on.' : 'Open your browser menu and choose <b>Install app</b> or <b>Add to Home screen</b>. Open the app from the new icon from then on.'}</span>
+    <span class="sub">Once installed it opens and saves with no signal. Inspections and photos are stored on this phone until you export them.</span></div>`;
+  return `
+  ${install}
+  <div class="row between" style="align-items:flex-start"><div class="sec grow"><h2 class="hero">Bridge site inspection</h2>
+    <span class="sub">Pick a bridge type to set up its inspection template.</span></div>
+    <button class="btn ghost sm" data-act="data" aria-label="Data and backup">${ICON.db} Data</button></div>
+  <div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
+    <button class="tile" data-act="new" data-type="${k}">${typeIcon(k)}<b>${esc(t.name)}</b><span class="sub">${esc(t.blurb)}</span><span class="go">Set up →</span></button>`).join('')}</div>
+  <div class="sec"><div class="sec-h"><h3>Your bridges</h3><span class="sub">Stored on this device</span></div>
+    <label class="f"><span class="sr">Search bridges</span><input class="in" id="q" type="search" placeholder="Bridge No., road, SLK or region" value="${esc(S.q)}" data-in="q" autocomplete="off"></label>
+    <div class="chips" role="group" aria-label="Filter by type">
+      ${[['all', 'All'], ...Object.entries(TEMPLATES).map(([k, t]) => [k, t.name.replace(' bridge', '')])].map(([k, l]) => `<button class="chip" aria-pressed="${S.ft === k}" data-act="ft" data-v="${k}">${esc(l)}</button>`).join('')}</div>
+    <div id="blist" class="sec">${bridgeList()}</div></div>`;
+}
+function bridgeList() {
+  const t = S.q.trim().toLowerCase();
+  const rows = Store.all('bridges').filter(b => (S.ft === 'all' || typeOf(b) === S.ft) && (!t || [b.bridgeNo, b.road, b.slk, b.region].some(x => String(x || '').toLowerCase().includes(t))))
+    .sort((a, b) => String(a.bridgeNo).localeCompare(String(b.bridgeNo), 'en', { numeric: true }));
+  if (!rows.length) return t || S.ft !== 'all' ? '<span class="sub">No bridge matches this search.</span>'
+    : '<div class="card"><b>No bridges yet</b><span class="sub">Pick a type above to set up your first bridge, or add a sample to try the app.</span><button class="btn out sm" data-act="sample">Add a sample timber bridge</button></div>';
+  return rows.map(b => {
+    const list = inspectionsFor(b.id), active = list.find(i => i.status !== 'complete'), last = list.find(i => i.status === 'complete');
+    const tl = active ? tally(active, b) : null;
+    const pill = active ? `<span class="pill hot">${LEVELS[active.level].split(' ·')[0]} · ${tl.done}/${tl.total} done</span>` : last ? `<span class="pill">Inspected ${fmtDate(last.completedAt)}</span>` : '<span class="pill">Not inspected</span>';
+    return `<button class="card tap ${active ? 'hot' : ''}" style="flex-direction:column;align-items:stretch;gap:8px" data-act="open-bridge" data-id="${esc(b.id)}">
+      <span class="row between"><span class="row" style="gap:8px"><span class="tico">${typeIcon(typeOf(b), 32, 20)}</span><span class="mono" style="font-weight:600">${esc(TEMPLATES[typeOf(b)].name.replace(' bridge', ''))} ${esc(b.bridgeNo)}</span></span>${pill}</span>
+      <span style="font-size:18px;font-weight:600">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(' · ') || '—')}</span>
+      <span class="sub">${esc(factsOf(b).slice(1, 3).map(f => f[1]).join(' · '))} · ${b.components.length} components${b.sample ? ' · sample' : ''}</span>
+    </button>`;
+  }).join('');
+}
+
+/* ---------- Data, backup, restore ---------- */
+function viewData() {
+  setBar('Data & backup', 'Start');
+  const nb = Store.all('bridges').length, ni = Store.all('inspections').length, np = Store.all('inspections').reduce((a, i) => a + photosOf(i).length, 0);
+  const gps = lsGet('bsi-gps', true);
+  setTimeout(async () => { try { const e = await navigator.storage?.estimate?.(); const el = $('#usage'); if (e && el) el.textContent = `${fmtSize(e.usage || 0)} used${e.quota ? ' of about ' + fmtSize(e.quota) + ' available' : ''}`; } catch {} }, 0);
+  const r = S.restore;
+  return `
+  <h2 class="big">Data &amp; backup</h2>
+  <div class="facts"><div><span class="sub">Bridges</span><b>${nb}</b></div><div><span class="sub">Inspections</span><b>${ni}</b></div><div><span class="sub">Photos</span><b>${np}</b></div></div>
+  <div class="card"><b>Stored on this device only</b>
+    <span class="sub" id="usage">Checking storage…</span>
+    <span class="sub">${Store.persisted ? 'Protected: the phone will not clear this data on its own.' : 'Not yet protected from automatic clean-up. Install the app on the home screen and open it from the icon.'} Export each inspection when finished, and back up regularly.</span></div>
+  <div class="sec"><div class="sec-h"><h3>Backup</h3></div>
+    <button class="btn block" data-act="backup">Back up everything (ZIP)</button>
+    <span class="sub">One file with every bridge, inspection and photo. Save it to Files, OneDrive or SharePoint. Use it to move to a new phone or recover data.</span>
+    <button class="btn out block" data-act="restore-pick">Restore from a backup</button>
+    ${r ? `<div class="confirm"><span class="grow">${r.error ? esc(r.error) : `Backup from ${esc(fmtDate(r.data.exportedAt))}: ${Object.keys(r.data.bridges || {}).length} bridges, ${Object.keys(r.data.inspections || {}).length} inspections, ${r.photos} photos. Records with the same ID on this phone will be replaced.`}</span>
+      <button class="btn sm ghost" data-act="restore-cancel">Cancel</button>${r.error ? '' : '<button class="btn sm" data-act="restore-apply">Restore</button>'}</div>` : ''}</div>
+  <div class="sec"><div class="sec-h"><h3>Settings</h3></div>
+    <button class="chip" aria-pressed="${gps}" data-act="gps-toggle">Tag photos with GPS location</button>
+    <span class="sub">The phone's GPS works without mobile signal. Locations go into the picture index.</span>
+    <button class="chip" aria-pressed="${lsGet('bsi-camroll', true)}" data-act="camroll-toggle">Offer to save new photos to iPhone Photos</button>
+    <span class="sub">After each camera photo, one tap on <b>Save Image</b> also keeps a copy in the Photos app. Photos are always kept inside this app either way.</span></div>
+  <div class="sec"><div class="sec-h"><h3>Using it offline</h3></div>
+    <span class="sub">Open the app once with signal after each update. From then on it opens and works with no signal. Voice: tap Speak, then the microphone on your keyboard (iPhone dictation works offline on recent iPhones; older ones need signal).</span></div>`;
+}
+
+/* ---------- Set up bridge ---------- */
+function newForm(type) {
+  const T = TEMPLATES[type], f = { type, bridgeNo: '', road: '', slk: '', region: '' };
+  T.params.forEach(([k, , , , d]) => f[k] = d); T.choices.forEach(([k, , opts]) => f[k] = opts[0][0]);
+  return f;
+}
+function viewAdd() {
+  const f = S.form, T = TEMPLATES[f.type];
+  setBar('Set up ' + T.name.toLowerCase(), 'Start');
+  const comps = generateComponents(f.type, f), locs = [...new Set(comps.filter(c => c.loc !== 'GEN').map(c => c.loc))];
+  const stepper = ([k, label, min, max]) => `<div class="step"><span class="l">${label}</span>
+    <button data-act="step" data-k="${k}" data-d="-1" data-min="${min}" data-max="${max}" aria-label="Decrease ${label}">−</button><b>${f[k]}</b>
+    <button data-act="step" data-k="${k}" data-d="1" data-min="${min}" data-max="${max}" aria-label="Increase ${label}">+</button></div>`;
+  const locSeq = locs.length > 9 ? [...locs.slice(0, 4), '…', ...locs.slice(-3)] : locs;
+  return `
+  <div class="row" style="gap:12px"><span style="color:var(--accent)">${typeIcon(f.type)}</span><h2 class="big">${esc(T.name)}</h2></div>
+  <div class="sec"><div class="sec-h"><h3>Identification</h3></div>
+    <label class="f"><span>Bridge / structure No.</span><input class="in" id="f-bridgeNo" data-in="form" data-k="bridgeNo" value="${esc(f.bridgeNo)}" placeholder="e.g. 0412" autocapitalize="characters"></label>
+    <div class="row wrap" style="align-items:flex-start">
+      <label class="f" style="min-width:200px"><span>Road</span><input class="in" id="f-road" data-in="form" data-k="road" value="${esc(f.road)}" placeholder="Road name"></label>
+      <label class="f" style="max-width:140px"><span>SLK</span><input class="in" id="f-slk" data-in="form" data-k="slk" value="${esc(f.slk)}" inputmode="decimal" placeholder="0.00"></label></div>
+    <label class="f"><span>Region</span><input class="in" id="f-region" data-in="form" data-k="region" value="${esc(f.region)}" placeholder="Region"></label>
+  </div>
+  <div class="sec"><div class="sec-h"><h3>Layout · numbered in the direction of increasing SLK</h3></div>
+    <div class="card" style="gap:0">${T.params.map(stepper).join('')}</div>
+    ${T.choices.map(([k, label, opts]) => `<span class="sub">${label}</span><div class="seg" role="group" aria-label="${esc(label)}">${opts.map(([v, l]) => `<button aria-pressed="${f[k] === v}" data-act="form-set" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join('')}</div>`).join('')}
+  </div>
+  <div class="card"><b>${comps.length} components will be created</b><span class="sub">${['General', ...locSeq.map(l => l === '…' ? '…' : locLabel(l))].join(' → ')}</span>
+    <span class="sub">Photos are named by component, e.g. ${esc(comps.filter(c => c.loc !== 'GEN').slice(0, 3).map(c => c.ph + '.jpg').join(', '))}.</span></div>
+  <button class="btn block" data-act="save-bridge">Save ${esc(T.name.toLowerCase())}</button>`;
+}
+
+/* ---------- Bridge ---------- */
+function viewBridge(id) {
+  const b = Store.get('bridges', id); if (!b) return gone();
+  const T = TEMPLATES[typeOf(b)];
+  setBar(`${T.name.replace(' bridge', '')} ${b.bridgeNo}`, 'Start');
+  const list = inspectionsFor(id), active = list.find(i => i.status !== 'complete');
+  const start = active ? `<button class="btn block" data-act="open-insp" data-id="${esc(active.id)}">Continue ${esc(LEVELS[active.level])} inspection</button>` : `
+    <div class="sec"><div class="sec-h"><h3>New inspection</h3></div>
+      <label class="f"><span>Inspector</span><input class="in" id="inspector" value="${esc(lsGet('bsi-inspector', ''))}" placeholder="Your name" autocomplete="name"></label>
+      <div class="seg" role="group" aria-label="Inspection level">${[2, 1].map(n => `<button aria-pressed="${S.level === n}" data-act="lvl" data-v="${n}">${LEVELS[n]}</button>`).join('')}</div>
+      <button class="btn block" data-act="start">Start inspection</button></div>`;
+  return `
+  <div class="row" style="gap:12px;align-items:flex-start"><span style="color:var(--accent);padding-top:2px">${typeIcon(typeOf(b), 48, 30)}</span>
+    <div class="grow"><span class="mono sub" style="font-weight:600">${esc(T.name)} ${esc(b.bridgeNo)}${b.region ? ' · ' + esc(b.region) : ''}</span>
+    <h2 class="big">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(', ') || 'Structure')}</h2></div></div>
+  <div class="facts">${factsOf(b).map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v)}</b></div>`).join('')}<div><span class="sub">Components</span><b>${b.components.length}</b></div></div>
+  <div class="card"><div class="row between wrap"><span class="sub">GPS · ${typeOf(b) === 'underpass' ? 'Entry 1' : 'Abutment 1, LHS top corner'}</span><button class="btn out sm" data-act="gps-here">${ICON.pin} Use my location</button></div>
+    <div class="row wrap" style="align-items:flex-end">
+      <label class="f" style="min-width:130px"><span>Latitude</span><input class="in mono" id="lat" inputmode="decimal" value="${b.gps ? esc(b.gps.lat) : ''}" placeholder="-31.950000"></label>
+      <label class="f" style="min-width:130px"><span>Longitude</span><input class="in mono" id="lng" inputmode="decimal" value="${b.gps ? esc(b.gps.lng) : ''}" placeholder="115.860000"></label>
+      <button class="btn out sm" style="min-height:48px" data-act="save-gps">Save</button></div></div>
+  ${start}
+  <div class="sec"><div class="sec-h"><h3>History</h3></div>
+    ${list.length ? list.map(i => { const t = tally(i, b);
+      return `<button class="tap" data-act="${i.status === 'complete' ? 'open-review' : 'open-insp'}" data-id="${esc(i.id)}">
+      <span class="grow">${esc(LEVELS[i.level])} · ${fmtDate(i.completedAt || i.startedAt)}<br><span class="sub">${t.def} with defects · ${t.photos} photos${i.inspector ? ' · ' + esc(i.inspector) : ''}</span></span>
+      <span class="sub" style="${i.status !== 'complete' ? 'color:var(--accent);font-weight:600' : ''}">${i.status === 'complete' ? 'Complete' : 'In progress'}</span>${ICON.chev}</button>`; }).join('')
+      : '<span class="sub">No inspections yet.</span>'}</div>
+  ${S.confirm === 'del-bridge' ? `<div class="confirm"><span class="grow">Delete ${esc(b.bridgeNo)} and all its inspections and photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-bridge" data-id="${esc(id)}">Delete</button></div>`
+    : `<button class="btn ghost" data-act="ask" data-what="del-bridge">Delete bridge</button>`}`;
+}
+
+/* ---------- Checklist ---------- */
+function viewChecklist(id) {
+  const insp = Store.get('inspections', id); if (!insp) return gone();
+  const b = Store.get('bridges', insp.bridgeId); if (!b) return gone();
+  setBar(`${b.bridgeNo} · ${LEVELS[insp.level].split(' ·')[0]}`, 'Bridge');
+  const comps = b.components, I = itemsOf(insp), pc = photoCounts(insp);
+  const st = c => statusOf(I[c.id], pc[c.id]), t = tally(insp, b);
+  const locs = [...new Set(comps.map(c => c.loc))];
+  if (!S.loc || !locs.includes(S.loc)) S.loc = locs.find(l => comps.some(c => c.loc === l && !st(c).done)) || locs[0];
+  return `
+  <div><h2 class="big">${esc(LEVELS[insp.level])} inspection</h2><span class="sub">${esc(TEMPLATES[typeOf(b)].name)} ${esc(b.bridgeNo)} · numbered in the direction of increasing SLK, left to right.</span></div>
+  <div class="sec"><div class="row between wrap"><b>${t.done} of ${t.total} inspected</b><span class="sub">${t.def} with defects · ${t.photos} photos</span></div>
+    <div class="prog" role="img" aria-label="${t.done} of ${t.total} inspected, ${t.def} with defects"><i style="width:${t.def / t.total * 100}%;background:var(--def)"></i><i style="width:${(t.done - t.def) / t.total * 100}%;background:var(--ink)"></i></div></div>
+  <div class="chips loc" role="tablist" aria-label="Location">
+    ${locs.map(l => { const left = comps.filter(c => c.loc === l && !st(c).done).length;
+      return `<button class="chip" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${locLabel(l)}${left ? ' · ' + left : ' ✓'}</button>`; }).join('')}
+  </div>
+  <div class="sec">${comps.filter(c => c.loc === S.loc).map(c => {
+    const it = I[c.id] || {}, s = st(c), sub = [(it.defects || []).slice(0, 3).join(', '), pc[c.id] ? `${pc[c.id]} photo${pc[c.id] > 1 ? 's' : ''}` : '', it.comment ? '“' + it.comment.slice(0, 40) + (it.comment.length > 40 ? '…' : '') + '”' : ''].filter(Boolean).join(' · ') || c.ph + '.jpg';
+    return `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
+      <span class="grow" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:16px">${esc(c.name)}</b><span class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</span></span>
+      <span class="badge ${s.cls}">${s.label}</span></button>`;
+  }).join('')}</div>
+  <button class="btn dark block" data-act="open-review" data-id="${esc(id)}">Review &amp; finish</button>`;
+}
+
+/* ---------- Component: defects, comments, photos ---------- */
+function getDraft(inspId, cid) {
+  if (!S.draft || S.draft.inspId !== inspId || S.draft.cid !== cid) {
+    const it = itemsOf(Store.get('inspections', inspId))[cid] || {};
+    S.draft = { inspId, cid, it: { defects: [...(it.defects || [])], none: !!it.none, na: !!it.na, comment: it.comment || '' } };
+  }
+  return S.draft;
+}
+let draftT;
+function touchDraft() { clearTimeout(draftT); draftT = setTimeout(flushDraft, 400); }
+function flushDraft() {
+  clearTimeout(draftT);
+  const d = S.draft; if (!d) return;
+  const insp = Store.get('inspections', d.inspId); if (!insp || insp.status === 'complete') return;
+  const prev = itemsOf(insp)[d.cid], next = { ...d.it, defects: [...d.it.defects], updatedAt: now() };
+  if (prev && JSON.stringify({ ...prev, updatedAt: 0 }) === JSON.stringify({ ...next, updatedAt: 0 })) return;
+  if (!prev && !next.defects.length && !next.none && !next.na && !next.comment) return;
+  Store.patch('inspections', d.inspId, { items: { [d.cid]: next } });
+}
+function photoTile(p, ro, name) {
+  return `<div class="ph"><img alt="Photo ${esc(name || '')}" src="${esc(Store.photoSrc(p.id))}" data-pid="${esc(p.id)}"><span class="pname">${esc(name || '')}.jpg</span>${ro ? '' : `<button data-act="del-photo" data-pid="${esc(p.id)}" aria-label="Remove photo ${esc(name || '')}">×</button>`}</div>`;
+}
+function viewComponent(inspId, cid) {
+  const insp = Store.get('inspections', inspId); if (!insp) return gone();
+  const b = Store.get('bridges', insp.bridgeId), c = b.components.find(x => x.id === cid); if (!c) return gone();
+  const ro = insp.status === 'complete', it = getDraft(inspId, cid).it, dis = ro ? 'disabled' : '';
+  const photos = photosOf(insp, cid), names = photoNames(insp, b);
+  setBar(c.code, 'Components');
+  return `
+  <div><h2 class="big">${esc(c.name)}</h2><span class="sub">${locLabel(c.loc)} · <span class="mono">${esc(c.code)}</span> · photos save as <span class="mono">${esc(c.ph)}.jpg</span>${ro ? ' · completed, read only' : ''}</span></div>
+  <div class="sec"><div class="sec-h"><h3>Defects observed</h3>${it.defects.length ? `<span class="sub">${it.defects.length} selected</span>` : ''}</div>
+    <div class="chips">
+      <button class="chip okc" aria-pressed="${it.none}" data-act="none" ${dis}>No defects</button>
+      ${TEMPLATES[typeOf(b)].defects.map(x => `<button class="chip" aria-pressed="${it.defects.includes(x)}" data-act="defect" data-v="${esc(x)}" ${dis}>${esc(x)}</button>`).join('')}
+      <button class="chip nac" aria-pressed="${it.na}" data-act="na" ${dis}>Not accessible</button></div></div>
+  <div class="sec"><div class="sec-h"><h3>Comments</h3>${ro ? '' : `<button class="btn out sm" data-act="dictate" data-for="cmt">${ICON.mic} Speak</button>`}</div>
+    <label class="f"><span class="sr">Comments</span><textarea class="in" id="cmt" data-in="comment" autocapitalize="sentences" spellcheck="true" placeholder="Type, or tap Speak and use the microphone on your keyboard. E.g. 300 mm crack at mid-span, upstream face" ${dis}>${esc(it.comment)}</textarea></label></div>
+  <div class="sec"><div class="sec-h"><h3>Photos (${photos.length})</h3></div>
+    ${ro ? '' : `<div class="row"><button class="btn out grow" data-act="photo" data-cid="${esc(cid)}">${ICON.cam} Take photo</button><button class="btn ghost" data-act="photo-lib" data-cid="${esc(cid)}">${ICON.img} Choose several</button></div>`}
+    ${photos.length ? `<div class="photos">${photos.map(p => photoTile(p, ro, names[p.id])).join('')}</div>` : '<span class="sub">No photos yet. Take as many as you need; extra photos are numbered _2, _3 …</span>'}</div>
+  <div class="row stick"><button class="btn grow" data-act="done" data-cid="${esc(cid)}">${ro ? 'Back to list' : 'Done'}</button></div>`;
+}
+
+/* ---------- Review & finish ---------- */
+function viewReview(id) {
+  const insp = Store.get('inspections', id); if (!insp) return gone();
+  const b = Store.get('bridges', insp.bridgeId); if (!b) return gone();
+  const done = insp.status === 'complete', t = tally(insp, b), I = itemsOf(insp), pc = photoCounts(insp);
+  setBar(done ? 'Inspection record' : 'Review & finish', done ? 'Bridge' : 'Checklist');
+  const withDef = b.components.filter(c => (I[c.id]?.defects || []).length);
+  const todo = t.total - t.done, dis = done ? 'disabled' : '', names = photoNames(insp, b);
+  return `
+  <div><h2 class="big">${done ? 'Inspection complete' : 'Review & finish'}</h2><span class="sub">${esc(TEMPLATES[typeOf(b)].name)} ${esc(b.bridgeNo)} · ${esc(LEVELS[insp.level])} · started ${fmtDate(insp.startedAt)}${insp.inspector ? ' by ' + esc(insp.inspector) : ''}</span></div>
+  ${!done && todo ? `<div class="card warn"><span>${todo} component${todo > 1 ? 's have' : ' has'} nothing recorded yet.</span>
+    <div class="row wrap"><button class="btn out sm" data-act="mark" data-v="none" data-id="${esc(id)}">Mark the rest “No defects”</button><button class="btn ghost sm" data-act="mark" data-v="na" data-id="${esc(id)}">Mark the rest “Not accessible”</button></div></div>` : ''}
+  <div class="facts">
+    <div><span class="sub">Inspected</span><b>${t.done} / ${t.total}</b></div>
+    <div><span class="sub">With defects</span><b>${t.def}</b></div>
+    <div><span class="sub">No defects</span><b>${t.ok}</b></div>
+    <div><span class="sub">Not accessible</span><b>${t.na}</b></div>
+    <div><span class="sub">Photos</span><b>${t.photos}</b></div>
+    <div><span class="sub">Bridge type</span><b>${esc(TEMPLATES[typeOf(b)].name.replace(' bridge', ''))}</b></div></div>
+  <div class="sec"><div class="sec-h"><h3>Defects found (${withDef.length})</h3></div>
+    ${withDef.length ? withDef.map(c => `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
+      <span class="grow"><b>${esc(c.name)}</b> <span class="sub">${locLabel(c.loc)}</span><br><span>${esc(I[c.id].defects.join(', '))}</span>${I[c.id].comment ? `<br><span class="sub">${esc(I[c.id].comment)}</span>` : ''}</span>
+      <span class="badge b-def">${pc[c.id] || 0} photo${pc[c.id] === 1 ? '' : 's'}</span></button>`).join('') : '<span class="sub">No defects recorded.</span>'}</div>
+  <div class="sec"><div class="sec-h"><h3>Summary</h3>${done ? '' : `<button class="btn out sm" data-act="dictate" data-for="summary">${ICON.mic} Speak</button>`}</div>
+    <label class="f"><span class="sr">Inspection summary</span><textarea class="in" id="summary" data-in="review" autocapitalize="sentences" spellcheck="true" placeholder="Overall condition, key findings, access issues" ${dis}>${esc(insp.summary || '')}</textarea></label>
+    <label class="f"><span>Inspector</span><input class="in" id="inspector2" data-in="review" value="${esc(insp.inspector || '')}" placeholder="Name" ${dis}></label>
+    ${done ? `<span class="sub">Completed ${insp.completedAt ? new Date(insp.completedAt).toLocaleString('en-AU') : ''}</span>` : ''}</div>
+  ${done ? '' : S.confirm === 'finish' ? `<div class="confirm"><span class="grow">Complete and lock this inspection, then export the Word report and pictures?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm" data-act="finish" data-id="${esc(id)}">Complete &amp; export</button></div>`
+    : `<button class="btn block" data-act="ask" data-what="finish">Complete inspection</button>`}
+  <div class="sec"><div class="sec-h"><h3>Export</h3></div>
+    <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
+    <span class="sub">One folder named <span class="mono">${esc(pkgName(insp, b))}</span> with the Word report (summary table, then each picture captioned “Picture 1: Abutment 1 Pile No.1 - …”), every picture as its own file in <span class="mono">Photos/</span> (${t.photos ? esc(Object.values(names).slice(0, 2).join('.jpg, ')) + '.jpg …' : esc(b.components.filter(c => c.loc !== 'GEN').slice(0, 2).map(c => c.ph + '.jpg').join(', ') + ' …')}) and a picture index. Works offline.</span>
+    <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} Save all pictures to Photos</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div></div>
+  ${S.confirm === 'del-insp' ? `<div class="confirm"><span class="grow">Delete this inspection and its photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-insp" data-id="${esc(id)}">Delete</button></div>`
+    : `<button class="btn ghost" data-act="ask" data-what="del-insp">Delete inspection</button>`}`;
+}
+
+/* =========================================================================
+   Actions
+   ========================================================================= */
+let photoTarget = null;
+const A = {
+  back, home() { S.stack = []; S.route = { name: 'home' }; render(); },
+  data() { nav({ name: 'data' }); },
+  new(d) { S.form = newForm(d.type); nav({ name: 'add' }); },
+  ft(d) { S.ft = d.v; render(); },
+  async sample() {
+    const layout = { spans: 3, stringersPerSpan: 5, pilesPerPier: 4, abutPiles: 4, abutType: 'sheeting', corbels: 'yes' };
+    await Store.put('bridges', uid(), { type: 'timber', bridgeNo: '0000', road: 'Sample Road', slk: '4.21', region: 'Sample', layout, components: generateComponents('timber', layout), gps: null, sample: true, createdAt: now() });
+    render(); toast('Sample bridge added. Delete it when you are done trying the app.');
+  },
+  'open-bridge'(d) { S.level = 2; nav({ name: 'bridge', id: d.id }); },
+  step(d) { const f = S.form; f[d.k] = Math.min(+d.max, Math.max(+d.min, f[d.k] + +d.d)); render(); },
+  'form-set'(d) { S.form[d.k] = d.v; render(); },
+  async 'save-bridge'() {
+    const f = S.form, T = TEMPLATES[f.type];
+    if (!f.bridgeNo.trim()) { toast('Enter the bridge or structure number.'); $('#f-bridgeNo').focus(); return; }
+    const layout = {}; T.params.forEach(([k]) => layout[k] = f[k]); T.choices.forEach(([k]) => layout[k] = f[k]);
+    const id = uid();
+    await Store.put('bridges', id, { type: f.type, bridgeNo: f.bridgeNo.trim(), road: f.road.trim(), slk: f.slk.trim(), region: f.region.trim(), layout, components: generateComponents(f.type, layout), gps: null, createdAt: now() });
+    S.form = null; S.stack.pop(); S.level = 2; nav({ name: 'bridge', id }, true); toast('Saved on this device.');
+  },
+  async 'gps-here'() {
+    toast('Getting location…'); const fix = await getFix(15000);
+    if (!fix) { toast('No GPS fix. Allow location for this app in Settings, and try in the open.'); return; }
+    $('#lat').value = fix.lat; $('#lng').value = fix.lng; toast(`Location found (±${fix.acc} m). Tap Save to keep it.`);
+  },
+  async 'save-gps'() {
+    const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);
+    if (!(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) { toast('Enter latitude and longitude in decimal degrees, e.g. -31.95 and 115.86.'); return; }
+    await Store.patch('bridges', S.route.id, { gps: { lat, lng } }); toast('GPS saved.'); render();
+  },
+  lvl(d) { S.level = +d.v; const n = $('#inspector').value; render(); $('#inspector').value = n; },
+  async start() {
+    const name = $('#inspector').value.trim();
+    if (!name) { toast('Enter the inspector name first.'); $('#inspector').focus(); return; }
+    lsSet('bsi-inspector', name);
+    const id = uid();
+    await Store.put('inspections', id, { bridgeId: S.route.id, level: S.level || 2, status: 'in_progress', startedAt: now(), completedAt: null, inspector: name, summary: '', items: {}, photos: {} });
+    S.loc = null; nav({ name: 'checklist', id });
+  },
+  'open-insp'(d) { S.loc = null; nav({ name: 'checklist', id: d.id }); },
+  'open-review'(d) { nav({ name: 'review', id: d.id || S.route.id }); },
+  loc(d) { S.loc = d.loc; render(); },
+  'open-comp'(d) { nav({ name: 'component', id: S.route.id, cid: d.cid }); },
+  done(d) {
+    const el = $('#cmt'); if (el && S.draft) S.draft.it.comment = el.value;
+    flushDraft(); S.lastCid = d.cid; back();
+    const insp = Store.get('inspections', S.route.id);
+    if (insp && S.route.name === 'checklist' && insp.status !== 'complete') toast(statusOf(itemsOf(insp)[d.cid], photosOf(insp, d.cid).length).done ? 'Saved.' : 'Nothing recorded for that component yet.');
+  },
+  none() { const it = S.draft.it; it.none = !it.none; if (it.none) { it.defects = []; it.na = false; } touchDraft(); render(); },
+  na() { const it = S.draft.it; it.na = !it.na; if (it.na) it.none = false; touchDraft(); render(); },
+  defect(d) { const it = S.draft.it; it.defects = it.defects.includes(d.v) ? it.defects.filter(x => x !== d.v) : [...it.defects, d.v]; if (it.defects.length) { it.none = false; it.na = false; } touchDraft(); render(); },
+  dictate(d) {
+    const el = document.getElementById(d.for); if (!el) return;
+    el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch {}
+    if (n && !/\s$/.test(el.value)) { el.value += ' '; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    toast('Tap the microphone on your keyboard and speak.');
+  },
+  photo(d) { flushDraft(); photoTarget = { cid: d.cid, camera: true }; $('#photo-in').value = ''; $('#photo-in').click(); },
+  'photo-lib'(d) { flushDraft(); photoTarget = { cid: d.cid }; $('#photo-lib').value = ''; $('#photo-lib').click(); },
+  async 'del-photo'(d) { await Store.patch('inspections', S.route.id, { photos: { [d.pid]: null } }); render(); Store.removePhoto(d.pid); },
+  async mark(d) {
+    const insp = Store.get('inspections', d.id), b = Store.get('bridges', insp.bridgeId), pc = photoCounts(insp), patch = {};
+    b.components.forEach(c => { if (!statusOf(itemsOf(insp)[c.id], pc[c.id]).done) patch[c.id] = { defects: [], none: d.v === 'none', na: d.v === 'na', comment: '', updatedAt: now() }; });
+    await Store.patch('inspections', d.id, { items: patch }); render();
+  },
+  ask(d) { S.confirm = d.what; render(); },
+  cancel() { S.confirm = null; render(); },
+  async finish(d) {
+    const name = $('#inspector2').value.trim(); if (name) lsSet('bsi-inspector', name);
+    await Store.patch('inspections', d.id, { inspector: name, summary: $('#summary').value.trim(), status: 'complete', completedAt: now() });
+    S.confirm = null; render(); toast('Inspection completed. Preparing the export…');
+    exportPackage(d.id);
+  },
+  async 'del-insp'(d) {
+    const insp = Store.get('inspections', d.id);
+    await Store.remove('inspections', d.id);
+    photosOf(insp || {}).forEach(p => Store.removePhoto(p.id));
+    S.stack = S.stack.filter(r => r.id !== d.id || r.name === 'bridge'); S.route = S.stack.pop() || { name: 'home' };
+    S.confirm = null; render(); toast('Inspection deleted.');
+  },
+  async 'del-bridge'(d) {
+    for (const i of inspectionsFor(d.id)) { await Store.remove('inspections', i.id); photosOf(i).forEach(p => Store.removePhoto(p.id)); }
+    await Store.remove('bridges', d.id); S.stack = []; S.route = { name: 'home' }; S.confirm = null; render(); toast('Bridge deleted.');
+  },
+  pkg(d) { flushReview(); exportPackage(d.id); },
+  docx(d) { flushReview(); makeDocx(d.id); },
+  pics(d) { flushReview(); exportPackage(d.id, true); },
+  json(d) { flushReview(); exportJson(d.id); },
+  'gps-toggle'() { lsSet('bsi-gps', !lsGet('bsi-gps', true)); render(); },
+  'camroll-toggle'() { lsSet('bsi-camroll', !lsGet('bsi-camroll', true)); render(); },
+  async 'save-all-photos'(d) {
+    const insp = Store.get('inspections', d.id), b = Store.get('bridges', insp.bridgeId);
+    toast('Collecting pictures…'); const { pics } = await collectPictures(insp, b);
+    if (!pics.length) { toast('No pictures in this inspection yet.'); return; }
+    offerPhotos(pics);
+  },
+  backup() { backupAll(); },
+  'restore-pick'() { $('#restore-in').value = ''; $('#restore-in').click(); },
+  'restore-cancel'() { S.restore = null; render(); },
+  'restore-apply'() { applyRestore(); },
+  'sheet-share'() { shareReady(); },
+  'sheet-save'() { downloadReady(); },
+  'sheet-close'() { closeSheet(); },
+};
+let reviewT;
+function flushReview() {
+  clearTimeout(reviewT); if (S.route.name !== 'review') return;
+  const i = Store.get('inspections', S.route.id); if (!i || i.status === 'complete') return;
+  const s = $('#summary')?.value ?? i.summary, n = $('#inspector2')?.value ?? i.inspector;
+  if (s !== i.summary || n !== i.inspector) Store.patch('inspections', S.route.id, { summary: s, inspector: n });
+}
+const IN = {
+  q(el) { S.q = el.value; $('#blist').innerHTML = bridgeList(); },
+  form(el) { S.form[el.dataset.k] = el.value; },
+  comment(el) { S.draft.it.comment = el.value; touchDraft(); },
+  review() { clearTimeout(reviewT); reviewT = setTimeout(flushReview, 600); },
+};
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el || el.disabled) return; const fn = A[el.dataset.act]; if (fn) { e.preventDefault(); fn(el.dataset, el); } });
+document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
+window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { flushDraft(); flushReview(); } });
+
+/* ---------- Photos: downscale, store on device, tag GPS ---------- */
+function downscale(file, max, q) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('Could not read photo')), 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That file is not a readable image.')); };
+    img.src = url;
+  });
+}
+async function onPhotos(files) {
+  if (!files || !files.length || !photoTarget) return;
+  const inspId = S.route.id, tgt = photoTarget; photoTarget = null;
+  const added = [];
+  for (const f of files) {
+    try {
+      Store.pending++; Store.status();
+      const id = await Store.savePhoto(await downscale(f, 2000, 0.8));
+      await Store.patch('inspections', inspId, { photos: { [id]: { componentId: tgt.cid, takenAt: now() } } });
+      added.push(id);
+    } catch (e) { Store.setError('Photo not saved: ' + (e.message || e)); }
+    finally { Store.pending--; Store.status(); }
+  }
+  render(); if (added.length > 1) toast(`${added.length} photos added.`);
+  // Camera photos are not in the Photos app yet: offer to save them there (library picks already are).
+  if (added.length && tgt.camera && lsGet('bsi-camroll', true)) {
+    const insp = Store.get('inspections', inspId), b = Store.get('bridges', insp.bridgeId), names = photoNames(insp, b);
+    const pics = []; for (const id of added) { const blob = await Store.photoBlob(id); if (blob) pics.push({ blob, file: names[id] + '.jpg' }); }
+    offerPhotos(pics, true);
+  }
+  if (added.length && lsGet('bsi-gps', true)) getFix(8000).then(fix => { if (fix) Store.patch('inspections', inspId, { photos: Object.fromEntries(added.map(id => [id, { lat: fix.lat, lng: fix.lng, acc: fix.acc }])) }); });
+}
+$('#photo-in').addEventListener('change', e => onPhotos(e.target.files));
+$('#photo-lib').addEventListener('change', e => onPhotos(e.target.files));
+
+/* =========================================================================
+   Handing files to the user: iPhone/Android share sheet (Files, OneDrive, SharePoint, Mail…),
+   or a normal download on a computer. Sharing needs a fresh tap, so a ready file waits in a sheet.
+   ========================================================================= */
+let ready = null;
+const canShareFiles = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
+function showSheet(title, size, note, button) {
+  const sh = $('#sheet');
+  sh.innerHTML = `<div class="sheet-in"><div class="row between"><b class="grow" style="overflow-wrap:anywhere">${esc(title)}</b>${size ? `<span class="sub">${size}</span>` : ''}</div>
+    <span class="sub">${note}</span>
+    <div class="row"><button class="btn grow" data-act="sheet-share">${ICON.share} ${button}</button><button class="btn ghost" data-act="sheet-close">Close</button></div></div>`;
+  sh.hidden = false;
+}
+function offerFile(name, blob) {
+  const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+  ready = { name, blob, files: [file] };
+  if (!canShareFiles([file])) { downloadReady(); return; }
+  showSheet(name, fmtSize(blob.size), 'Ready. Share it to Files, OneDrive, SharePoint, Mail or AirDrop.', 'Share / Save');
+}
+/* Photos to the iPhone Photos app: the share sheet's "Save Image(s)" puts them in the camera roll;
+   "Save to Files" keeps the component file names. */
+function offerPhotos(pics, auto) {
+  const files = pics.map(x => new File([x.blob], x.file, { type: 'image/jpeg' }));
+  if (!files.length || !canShareFiles(files)) { if (!auto) toast('Saving to Photos needs the iPhone or Android share sheet.'); return; }
+  ready = { name: files.length === 1 ? files[0].name : `${files.length} photos`, files, photos: true };
+  const one = files.length === 1;
+  showSheet(one ? `Save ${files[0].name} to Photos?` : `Save ${files.length} pictures to Photos?`, fmtSize(files.reduce((a, f) => a + f.size, 0)),
+    `Tap the button, then <b>Save Image${one ? '' : 's'}</b> to keep ${one ? 'it' : 'them'} in the Photos app, or <b>Save to Files</b> to keep the component file names.`, one ? 'Save to Photos' : `Save ${files.length} to Photos`);
+}
+async function shareReady() {
+  if (!ready) return;
+  try { await navigator.share({ files: ready.files, title: ready.name }); closeSheet(); if (ready?.photos) toast('Shared.'); }
+  catch (e) { if (e && e.name === 'AbortError') return; if (ready.photos) { toast('Could not open the share sheet.'); return; } downloadReady(); }
+}
+function downloadReady() {
+  if (!ready || ready.photos) return;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(ready.blob); a.download = ready.name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+  toast('Saved ' + ready.name); closeSheet();
+}
+function closeSheet() { $('#sheet').hidden = true; $('#sheet').innerHTML = ''; }
+
+/* =========================================================================
+   Exports: Word report, pictures, JSON, full backup
+   ========================================================================= */
+function findingOf(it) { it = it || {}; return it.na ? 'Not accessible' : (it.defects || []).length ? it.defects.join(', ') : it.none ? 'No defects observed' : ''; }
+function captionOf(c, it) {
+  const where = c ? [locFull(c.loc), compFull(c)].filter(Boolean).join(' ') : 'Photo';
+  const desc = (it?.comment || '').trim().replace(/\s*\n+\s*/g, '; ') || findingOf(it) || 'No defects observed';
+  return `${where} - ${desc}`;
+}
+function orderedPhotos(insp, b) {
+  const ix = Object.fromEntries(b.components.map((c, i) => [c.id, i]));
+  return photosOf(insp).sort((x, y) => (ix[x.componentId] ?? 1e9) - (ix[y.componentId] ?? 1e9) || String(x.takenAt).localeCompare(String(y.takenAt)));
+}
+function imgSize(blob) {
+  return new Promise(res => { const u = URL.createObjectURL(blob), im = new Image();
+    im.onload = () => { res({ w: im.naturalWidth || 4, h: im.naturalHeight || 3 }); URL.revokeObjectURL(u); };
+    im.onerror = () => { res({ w: 4, h: 3 }); URL.revokeObjectURL(u); }; im.src = u; });
+}
+async function collectPictures(insp, b) {
+  const names = photoNames(insp, b), compBy = Object.fromEntries(b.components.map(c => [c.id, c])), I = itemsOf(insp);
+  const out = []; let missing = 0, n = 0;
+  for (const p of orderedPhotos(insp, b)) {
+    const blob = await Store.photoBlob(p.id); if (!blob) { missing++; continue; }
+    const c = compBy[p.componentId], it = c ? I[c.id] : null;
+    out.push({ p, blob, size: await imgSize(blob), n: ++n, file: names[p.id] + '.jpg', c, it, caption: captionOf(c, it) });
+  }
+  return { pics: out, missing };
+}
+const csvCell = v => /[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? '');
+function jsonData(id) {
+  const insp = Store.get('inspections', id), b = Store.get('bridges', insp.bridgeId);
+  return { exportedAt: now(), bridge: { id: insp.bridgeId, ...b }, inspection: { id, ...insp, photoFiles: photoNames(insp, b) } };
+}
+function exportJson(id) { const insp = Store.get('inspections', id), b = Store.get('bridges', insp.bridgeId); offerFile(`${pkgName(insp, b)}.json`, new Blob([JSON.stringify(jsonData(id), null, 2)], { type: 'application/json' })); }
+
+/* ---------- Word report (.docx), written as Office Open XML ---------- */
+const xe = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const wRun = (t, rpr = '') => `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ''}<w:t xml:space="preserve">${xe(t)}</w:t></w:r>`;
+const wP = (inner, ppr = '') => `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ''}${inner}</w:p>`;
+const wStyled = (t, style) => wP(wRun(t), `<w:pStyle w:val="${style}"/>`);
+function wTable(widths, head, rows, fills) {
+  const cell = (t, w, isHead, fill) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ''}</w:tcPr>${String(t ?? '').split('\n').map(line => wP(wRun(line, isHead ? '<w:b/>' : ''), '<w:spacing w:before="30" w:after="30"/>')).join('')}</w:tc>`;
+  return `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="${widths.reduce((a, x) => a + x, 0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+    <w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>
+    ${head ? `<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${head.map((h, i) => cell(h, widths[i], true, 'E3E7E4')).join('')}</w:tr>` : ''}
+    ${rows.map((r, ri) => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map((t, i) => cell(t, widths[i], false, fills && fills[ri] && fills[ri][i])).join('')}</w:tr>`).join('')}</w:tbl>`;
+}
+const DOCX_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault>
+<w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="60"/></w:pPr><w:rPr><w:b/><w:sz w:val="34"/><w:szCs w:val="34"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="300" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:jc w:val="center"/><w:spacing w:before="60" w:after="300"/></w:pPr><w:rPr><w:b/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
+<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:left w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:right w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="9AA39E"/></w:tblBorders></w:tblPr></w:style>
+</w:styles>`;
+async function buildDocx(id, collected) {
+  const insp = Store.get('inspections', id), b = Store.get('bridges', insp.bridgeId), T = TEMPLATES[typeOf(b)], I = itemsOf(insp);
+  const { pics } = collected || await collectPictures(insp, b);
+  const t = tally(insp, b), picsBy = {};
+  pics.forEach(x => (picsBy[x.p.componentId] = picsBy[x.p.componentId] || []).push(x.n));
+  let body = '';
+  body += wStyled(`${T.name} ${b.bridgeNo} - ${LEVELS[insp.level]} inspection`, 'Title');
+  body += wP(wRun([b.road, b.slk && 'SLK ' + b.slk, b.region].filter(Boolean).join(' · ') || ' ', '<w:color w:val="4F5B55"/>'));
+  const info = [
+    ['Structure', factsOf(b).map(([k, v]) => `${k}: ${v}`).join('; ')],
+    ['GPS', b.gps ? `${b.gps.lat}, ${b.gps.lng}` : '-'],
+    ['Inspector', insp.inspector || '-'],
+    ['Inspection date', `${fmtDate(insp.startedAt)}${insp.status === 'complete' ? '' : ' (draft, in progress)'}`],
+    ['Findings', `${t.done} of ${t.total} components inspected; ${t.def} with defects; ${t.ok} no defects; ${t.na} not accessible; ${pics.length} pictures`],
+  ];
+  body += wTable([2400, 7238], null, info, info.map(() => ['F1F3F1']));
+  if (insp.summary) { body += wStyled('Inspection summary', 'Heading1'); insp.summary.split(/\n+/).forEach(l => body += wP(wRun(l))); }
+  body += wStyled('Summary table', 'Heading1');
+  const rows = [], fills = [];
+  b.components.forEach((c, i) => {
+    const it = I[c.id] || {}, f = findingOf(it);
+    rows.push([String(i + 1), locFull(c.loc) || 'General', compFull(c), f || (it.comment || picsBy[c.id] ? 'See comments' : 'Not recorded'), it.comment || '', (picsBy[c.id] || []).map(n => 'Picture ' + n).join('\n')]);
+    fills.push([null, null, null, it.na ? 'E3E7E4' : (it.defects || []).length ? 'F6D2B8' : it.none ? 'DCEFE4' : null, null, null]);
+  });
+  body += wTable([520, 1180, 1900, 2250, 2588, 1200], ['No.', 'Location', 'Component', 'Defects observed', 'Comments', 'Pictures'], rows, fills);
+  const rels = [];
+  if (pics.length) {
+    body += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>` + wStyled('Photographs', 'Heading1');
+    const maxW = 16 * 360000, maxH = 11.5 * 360000;
+    pics.forEach((x, i) => {
+      const k = Math.min(maxW / x.size.w, maxH / x.size.h), cx = Math.round(x.size.w * k), cy = Math.round(x.size.h * k), rid = 'rIdImg' + (i + 1), nid = i + 1;
+      rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/picture${nid}.jpeg"/>`);
+      body += `<w:p><w:pPr><w:keepNext/><w:jc w:val="center"/><w:spacing w:before="120" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${nid}" name="Picture ${nid}" descr="${xe(x.file)}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${nid}" name="${xe(x.file)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+      body += `<w:p><w:pPr><w:pStyle w:val="Caption"/></w:pPr>${wRun('Picture ')}<w:fldSimple w:instr=" SEQ Picture \\* ARABIC "><w:r><w:rPr><w:b/></w:rPr><w:t>${x.n}</w:t></w:r></w:fldSimple>${wRun(': ' + x.caption)}</w:p>`;
+    });
+  }
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const z = new JSZip();
+  z.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`);
+  z.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  z.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${rels.join('')}</Relationships>`);
+  z.file('word/styles.xml', DOCX_STYLES);
+  z.file('word/document.xml', doc);
+  pics.forEach((x, i) => z.file(`word/media/picture${i + 1}.jpeg`, x.blob));
+  return { name: `${pkgName(insp, b)}${insp.status === 'complete' ? '' : '-draft'}.docx`, blob: await z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' }) };
+}
+async function makeDocx(id) {
+  toast('Building Word report…');
+  try { const r = await buildDocx(id); offerFile(r.name, r.blob); }
+  catch (e) { console.error(e); toast('Word report failed: ' + (e.message || e)); }
+}
+async function exportPackage(id, photosOnly) {
+  const insp = Store.get('inspections', id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
+  toast(photosOnly ? 'Collecting pictures…' : 'Building export…');
+  try {
+    const root = pkgName(insp, b) + (insp.status === 'complete' ? '' : '-draft') + (photosOnly ? '_Photos' : '');
+    const zip = new JSZip(), dir = zip.folder(root), pf = photosOnly ? dir : dir.folder('Photos');
+    const collected = await collectPictures(insp, b);
+    const rows = [['Picture', 'File', 'Caption', 'Component ID', 'Location', 'Component', 'Defects observed', 'Comments', 'Taken', 'Latitude', 'Longitude']];
+    for (const x of collected.pics) {
+      pf.file(x.file, x.blob);
+      rows.push([x.n, x.file, `Picture ${x.n}: ${x.caption}`, x.c ? x.c.code : '', x.c ? locFull(x.c.loc) || 'General' : '', x.c ? compFull(x.c) : '', findingOf(x.it), x.it?.comment || '', x.p.takenAt ? new Date(x.p.takenAt).toLocaleString('en-AU') : '', x.p.lat ?? '', x.p.lng ?? '']);
+    }
+    dir.file('Picture index.csv', '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n'));
+    if (!photosOnly) {
+      const d = await buildDocx(id, collected); dir.file(d.name, d.blob);
+      dir.file(root + '.json', JSON.stringify(jsonData(id), null, 2));
+    }
+    offerFile(root + '.zip', await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' }));
+    if (collected.missing) toast(`${collected.missing} photo${collected.missing > 1 ? 's' : ''} could not be read and were left out.`);
+  } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e)); }
+}
+
+/* ---------- Full backup and restore ---------- */
+async function backupAll() {
+  toast('Building backup…');
+  try {
+    const day = now().slice(0, 10), root = `BridgeInspect-backup-${day}`, zip = new JSZip(), dir = zip.folder(root), pd = dir.folder('photos');
+    const data = { app: 'bridge-site-inspection', version: 1, exportedAt: now(), bridges: Store.cache.bridges, inspections: Store.cache.inspections };
+    let n = 0;
+    for (const id of await IDB.keys('photos')) { const r = await IDB.get('photos', id); if (r?.blob) { pd.file(id + '.jpg', r.blob); n++; } }
+    dir.file('data.json', JSON.stringify(data, null, 1));
+    offerFile(root + '.zip', await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' }));
+    toast(`Backup ready: ${Object.keys(data.bridges).length} bridges, ${Object.keys(data.inspections).length} inspections, ${n} photos.`);
+  } catch (e) { console.error(e); toast('Backup failed: ' + (e.message || e)); }
+}
+$('#restore-in').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try {
+    const z = await JSZip.loadAsync(f), dj = z.file(/(^|\/)data\.json$/)[0];
+    if (!dj) throw new Error('This is not a Bridge Site Inspection backup (no data.json inside).');
+    const data = JSON.parse(await dj.async('string'));
+    if (data.app !== 'bridge-site-inspection') throw new Error('This file is not a backup from this app.');
+    const photos = z.file(/(^|\/)photos\/[^/]+\.jpg$/);
+    S.restore = { data, zip: z, photoFiles: photos, photos: photos.length };
+  } catch (err) { S.restore = { error: 'Could not read that backup: ' + (err.message || err) }; }
+  render();
+});
+async function applyRestore() {
+  const r = S.restore; if (!r || r.error) return;
+  toast('Restoring…');
+  try {
+    for (const pf of r.photoFiles) { const id = pf.name.split('/').pop().replace(/\.jpg$/, ''); await IDB.put('photos', id, { blob: await pf.async('blob').then(b => new Blob([b], { type: 'image/jpeg' })), at: now() }); }
+    for (const [id, v] of Object.entries(r.data.bridges || {})) await IDB.put('bridges', id, v);
+    for (const [id, v] of Object.entries(r.data.inspections || {})) await IDB.put('inspections', id, v);
+    Store.cache.bridges = await IDB.all('bridges'); Store.cache.inspections = await IDB.all('inspections');
+    S.restore = null; render(); toast('Backup restored.');
+  } catch (e) { console.error(e); Store.setError('Restore failed: ' + (e.message || e)); }
+}
+
+/* ---------- Boot ---------- */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline mode not available:', e));
+Store.init().then(render).catch(e => { console.error(e); $('#view').innerHTML = `<div class="card warn"><b>This browser blocked on-device storage.</b><span class="sub">${esc(e.message || e)}. Turn off private browsing, or open the installed app from its home-screen icon.</span></div>`; });
+</script>
+</body>
+</html>
