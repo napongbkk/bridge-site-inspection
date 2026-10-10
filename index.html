@@ -1349,7 +1349,21 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-act
    Left: the inspection's elements; click one to show its pictures. Drag pictures (or a whole
    element) onto the A4 pages. Two pictures fit per page; numbering and captions run automatically,
    and each picture's size and description can be changed. Export builds the Word file. */
-const PR = { mm: 3, open: new Set(), drag: null, sideTop: 0, saveT: null };
+const PR = { mm: 3, open: new Set(), drag: null, sideTop: 0, saveT: null, rotUrl: {} };
+// Turn a photo by 90/180/270 degrees (clockwise). maxSide limits the size for on-screen previews.
+async function rotBlob(blob, rot, maxSide = 0) {
+  const img = await loadImage(blob), W = img.naturalWidth, H = img.naturalHeight;
+  let k = Math.min(1, Math.sqrt(CANVAS_MAX_PX / (W * H))); if (maxSide) k = Math.min(k, maxSide / Math.max(W, H));
+  const w = Math.round(W * k), h = Math.round(H * k), c = document.createElement('canvas'), turn = rot % 180 !== 0;
+  c.width = turn ? h : w; c.height = turn ? w : h;
+  const g = c.getContext('2d'); g.translate(c.width / 2, c.height / 2); g.rotate(rot * Math.PI / 180); g.drawImage(img, -w / 2, -h / 2, w, h);
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Could not rotate the photo')), 'image/jpeg', 0.92));
+}
+async function prRotPreview(img) {
+  const pid = img.dataset.rpid, rot = +img.dataset.rot, key = pid + '@' + rot;
+  if (!PR.rotUrl[key]) { const bl = await Store.photoBlob(pid); if (!bl) return; PR.rotUrl[key] = URL.createObjectURL(await rotBlob(bl, rot, 1800)); }
+  if (img.isConnected && img.getAttribute('src') !== PR.rotUrl[key]) img.src = PR.rotUrl[key];
+}
 const PR_BOX = { half: { w: 160, h: 108 }, full: { w: 160, h: 228 } };   // mm inside 20 mm A4 margins
 const prKey = id => 'bsi-layout-' + id;
 function prLoad(id) { const L = lsGet(prKey(id), null); return L && Array.isArray(L.items) ? L : { title: '', items: [] }; }
@@ -1416,11 +1430,14 @@ function viewLayout(id) {
       <div class="pr-ft" role="group" aria-label="Picture ${i + 1} options">
         <label title="Picture size">Size <input type="range" min="30" max="100" step="5" value="${x.size || 100}" data-pr="size" data-idx="${i}" aria-label="Size of picture ${i + 1}"></label>
         <span class="pr-dim" data-dim="${i}"></span>
+        <button data-act="pr-rot" data-idx="${i}" data-v="270" aria-label="Rotate picture ${i + 1} left" title="Rotate left">⟲</button>
+        <button data-act="pr-rot" data-idx="${i}" data-v="90" aria-label="Rotate picture ${i + 1} right" title="Rotate right">⟳</button>
         <button data-act="pr-full" data-idx="${i}" title="${x.full ? 'Back to two per page' : 'Use the whole page'}">${x.full ? '½ page' : 'Full page'}</button>
         <button data-act="pr-move" data-idx="${i}" data-v="-1" aria-label="Move picture ${i + 1} earlier" ${i ? '' : 'disabled'}>↑</button>
         <button data-act="pr-move" data-idx="${i}" data-v="1" aria-label="Move picture ${i + 1} later" ${i < L.items.length - 1 ? '' : 'disabled'}>↓</button>
         <button data-act="pr-del" data-idx="${i}" aria-label="Remove picture ${i + 1}" title="Remove">✕</button></div>
-      <img alt="" src="${esc(Store.photoSrc(x.pid))}" data-pid="${esc(x.pid)}" data-fi="${i}" draggable="false" style="${prImgStyle(x)}">
+      ${x.rot ? `<img alt="" src="${esc(PR.rotUrl[x.pid + '@' + x.rot] || '')}" data-rpid="${esc(x.pid)}" data-rot="${x.rot}" data-fi="${i}" draggable="false" style="${prImgStyle(x)}">`
+        : `<img alt="" src="${esc(Store.photoSrc(x.pid))}" data-pid="${esc(x.pid)}" data-fi="${i}" draggable="false" style="${prImgStyle(x)}">`}
       <figcaption>Picture ${i + 1}: <span class="pr-cap" contenteditable="true" spellcheck="true" data-idx="${i}" aria-label="Description of picture ${i + 1}">${esc(prCap(x, pics))}</span>${x.cap != null ? ` <button class="pr-reset" data-act="pr-reset" data-idx="${i}" title="Use the automatic description" aria-label="Use the automatic description">↺</button>` : ''}</figcaption>
     </figure>`;
   const drop = txt => `<div class="pr-drop" data-drop="end">${txt}</div>`;
@@ -1446,6 +1463,7 @@ function prDims(img) {
 function prAfter() {
   const sd = $('.pr-side'); if (sd) sd.scrollTop = PR.sideTop;
   document.querySelectorAll('.pr-fig img').forEach(img => { if (img.complete) prDims(img); img.addEventListener('load', () => prDims(img)); });
+  document.querySelectorAll('.pr-fig img[data-rpid]').forEach(img => prRotPreview(img).catch(e => toast(e.message || String(e))));
 }
 function prAdd(pids, at) {
   const L = S.lay, have = new Set(L.items.map(x => x.pid)), add = pids.filter(p => !have.has(p)).map(pid => ({ pid, size: 100 }));
@@ -1460,6 +1478,7 @@ Object.assign(A, {
   'pr-addcomp'(d) { prAdd(prCompPids(d.cid)); },
   'pr-addall'() { const insp = Store.get('inspections', S.layId), b = Store.get('bridges', insp.bridgeId); prAdd(Object.keys(prPics(insp, b))); },
   'pr-del'(d) { S.lay.items.splice(+d.idx, 1); prSave(); render(); },
+  'pr-rot'(d) { const x = S.lay.items[+d.idx]; x.rot = ((x.rot || 0) + +d.v) % 360; if (!x.rot) delete x.rot; prSave(); render(); },
   'pr-full'(d) { const x = S.lay.items[+d.idx]; x.full = !x.full; prSave(); render(); },
   'pr-move'(d) { const L = S.lay.items, i = +d.idx, j = i + +d.v; if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; prSave(); render(); },
   'pr-reset'(d) { delete S.lay.items[+d.idx].cap; prSave(); render(); },
@@ -1519,7 +1538,8 @@ async function prExport() {
     const pics = prPics(insp, b), pages = prPages(L.items), rels = [], media = []; let body = '', n = 0, missing = 0;
     for (const [pi, pg] of pages.entries()) {
       for (const [k, { x }] of pg.list.entries()) {
-        const blob = await Store.photoBlob(x.pid); if (!blob) { missing++; continue; }
+        let blob = await Store.photoBlob(x.pid); if (!blob) { missing++; continue; }
+        if (x.rot) blob = await rotBlob(blob, x.rot);
         const sz = await imgSize(blob), box = x.full ? PR_BOX.full : PR_BOX.half, s = Math.min(box.w / sz.w, box.h / sz.h) * (x.size || 100) / 100;
         const cx = Math.round(sz.w * s * 36000), cy = Math.round(sz.h * s * 36000), nid = ++n, rid = 'rIdImg' + nid, file = pics[x.pid].name + '.jpg';
         rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/picture${nid}.jpeg"/>`);

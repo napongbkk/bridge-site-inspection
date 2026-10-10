@@ -137,5 +137,5 @@ Open the app link in Chrome or Edge on a computer (it syncs from Google Drive), 
 - Left: the inspection's elements, grouped by location. Click an element to show its pictures.
 - Drag a picture (or a whole element) onto the A4 pages. Two pictures fit per page; drop on the top or bottom half of a picture to place it before or after. Drag pictures on the pages to reorder.
 - Captions number automatically: "Picture 1: Abutment 1 Pile No.1 - …". Click a caption to change the description (↺ puts the automatic one back).
-- Hover a picture to change its size, make it full page, move or remove it.
+- Hover a picture to change its size, rotate it (⟲ ⟳), make it full page, move or remove it.
 - **Export Word** downloads `<package>_Pictures.docx` laid out exactly as shown. The layout is remembered on that computer.
