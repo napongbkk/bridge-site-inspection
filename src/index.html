@@ -235,6 +235,8 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .sec-h .more svg{width:14px;height:14px;vertical-align:-2px}
 .chip.adddef{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
 .chips.loc .chip.addloc{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
+.dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.dl div{display:flex;flex-direction:column;gap:2px;min-width:0} .dl b{font-size:15.5px;overflow-wrap:anywhere}
 .mg-items{display:flex;flex-wrap:wrap;gap:6px}
 .mg-it{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:5px 6px 5px 12px;font-size:14px}
 .mg-it button{border:0;background:var(--card);color:var(--ink);width:24px;height:24px;border-radius:999px;cursor:pointer;font-size:11px}
@@ -740,7 +742,7 @@ function onRemoteChange() {
 const S = { hIdx: 0, newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
 function nav(route, replace) {
   if (!replace) { S.stack.push(S.route); S.hIdx++; try { history.pushState({ idx: S.hIdx }, ''); } catch {} }
-  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; S.addLoc = false; S.addDefect = false; render(); window.scrollTo(0, 0);
+  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; S.addLoc = false; S.addDefect = false; S.editDetails = false; render(); window.scrollTo(0, 0);
 }
 /* Leaving a component (Done or Back): hand its new camera photos to the phone in one go.
    iPhone: the tap that leaves the screen opens the share sheet; iPhone asks once ("Save Images"),
@@ -761,7 +763,7 @@ function leaveComponent() { S.addDefect = false; if (S.route.name === 'component
 // In-app Back and Done: leave the screen during the tap, then step back through browser history,
 // so the Android back gesture/button and the app's own Back always agree.
 function back() { leaveComponent(); if (S.hIdx > 0) history.back(); else appBack(); }
-function appBack() { S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
+function appBack() { S.editDetails = false; S.route = S.stack.pop() || { name: 'home' }; S.confirm = null; S.draft = null; render(); }
 window.addEventListener('popstate', e => {
   if (!$('#lightbox').hidden) lbClose();
   // Each app screen is one history entry, so the Android back gesture/button steps back one screen.
@@ -769,7 +771,7 @@ window.addEventListener('popstate', e => {
   if (idx >= S.hIdx) { S.hIdx = idx; return; }   // a forward step (rare on phones) is ignored
   leaveComponent();
   while (S.hIdx > idx) { S.route = S.stack.pop() || { name: 'home' }; S.hIdx--; }
-  S.confirm = null; S.draft = null; render();
+  S.confirm = null; S.draft = null; S.editDetails = false; render();
 });
 try { history.replaceState({ idx: 0 }, ''); } catch {}
 
@@ -1188,7 +1190,7 @@ function viewBridge(id) {
     <div class="grow"><span class="mono sub" style="font-weight:600">${esc(T.name)} ${esc(b.bridgeNo)}${b.project ? ' · Project ' + esc(b.project) : ''}${b.region ? ' · ' + esc(b.region) : ''}</span>
     <h2 class="big">${esc([b.road, b.slk && 'SLK ' + b.slk].filter(Boolean).join(', ') || 'Structure')}</h2></div></div>
   <div class="facts">${factsOf(b).map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v)}</b></div>`).join('')}<div><span class="sub">Components</span><b>${b.components.length}</b></div></div>
-  <div class="card"><b>Details</b>
+${S.editDetails ? `  <div class="card"><b>Details</b>
     <div class="row wrap" style="align-items:flex-start">
       <label class="f" style="min-width:140px"><span>Project number</span><input class="in" id="d-project" value="${esc(b.project || '')}" placeholder="e.g. P-2026-014"></label>
       <label class="f" style="min-width:140px"><span>Bridge / structure No.</span><input class="in" id="d-bridgeNo" value="${esc(b.bridgeNo || '')}"></label></div>
@@ -1196,7 +1198,8 @@ function viewBridge(id) {
       <label class="f" style="min-width:160px"><span>Road</span><input class="in" id="d-road" value="${esc(b.road || '')}"></label>
       <label class="f" style="max-width:130px"><span>SLK</span><input class="in" id="d-slk" inputmode="decimal" value="${esc(b.slk || '')}"></label></div>
     <label class="f"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
-    <button class="btn out sm" data-act="save-details">Save details</button></div>
+    <div class="row"><button class="btn ghost grow" data-act="edit-details-cancel">Cancel</button><button class="btn grow" data-act="save-details">Save details</button></div></div>` : `<div class="card"><div class="row between"><b>Details</b><button class="btn out sm" data-act="edit-details">Edit details</button></div>
+    <div class="dl">${[['Project number', b.project], ['Bridge / structure No.', b.bridgeNo], ['Road', b.road], ['SLK', b.slk], ['Region', b.region]].map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v || '—')}</b></div>`).join('')}</div></div>`}
   ${start}
   <div class="sec"><div class="sec-h"><h3>History</h3></div>
     ${list.length ? list.map(i => { const t = tally(i, b);
@@ -1398,11 +1401,13 @@ const A = {
     if (!fix) { toast('No GPS fix. Allow location for this app in Settings, and try in the open.'); return; }
     $('#lat').value = fix.lat; $('#lng').value = fix.lng; toast(`Location found (±${fix.acc} m). Tap Save to keep it.`);
   },
+  'edit-details'() { S.editDetails = true; render(); setTimeout(() => $('#d-project')?.focus(), 30); },
+  'edit-details-cancel'() { S.editDetails = false; render(); },
   async 'save-details'() {
     const v = k => $('#d-' + k).value.trim();
     if (!v('bridgeNo')) { toast('Enter the bridge or structure number.'); $('#d-bridgeNo').focus(); return; }
     await Store.patch('bridges', S.route.id, { project: v('project'), bridgeNo: v('bridgeNo'), road: v('road'), slk: v('slk'), region: v('region') });
-    toast('Details saved.'); render();
+    S.editDetails = false; toast('Details saved.'); render();
   },
   async 'save-gps'() {
     const lat = parseFloat($('#lat').value), lng = parseFloat($('#lng').value);

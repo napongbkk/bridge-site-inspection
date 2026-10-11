@@ -2,7 +2,7 @@
 // After that it opens with no signal. When there is signal, a newer version is
 // fetched in the background and used the next time the app is opened.
 // Bump VERSION whenever you upload changed files.
-const VERSION = 'bsi-v28';
+const VERSION = 'bsi-v29';
 const ASSETS = [
   './',
   './index.html',
