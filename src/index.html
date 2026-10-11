@@ -1183,7 +1183,7 @@ function viewBridge(id) {
   const list = inspectionsFor(id), active = list.find(i => i.status !== 'complete');
   const start = active ? `<button class="btn block" data-act="open-insp" data-id="${esc(active.id)}">Continue ${esc(LEVELS[active.level])} inspection</button>` : `
     <div class="sec"><div class="sec-h"><h3>New inspection</h3></div>
-      <label class="f"><span>Inspector</span><input class="in" id="inspector" value="${esc(lsGet('bsi-inspector', ''))}" placeholder="Your name" autocomplete="name"></label>
+      <label class="f"><span>Inspector</span><input class="in" id="inspector" value="${esc(b.inspector || lsGet('bsi-inspector', ''))}" placeholder="Your name" autocomplete="name"></label>
       <div class="seg" role="group" aria-label="Inspection level">${[2, 1].map(n => `<button aria-pressed="${S.level === n}" data-act="lvl" data-v="${n}">${LEVELS[n]}</button>`).join('')}</div>
       <button class="btn block" data-act="start">Start inspection</button></div>`;
   return `
@@ -1198,9 +1198,11 @@ ${S.editDetails ? `  <div class="card"><b>Details</b>
     <div class="row wrap" style="align-items:flex-start">
       <label class="f" style="min-width:160px"><span>Road</span><input class="in" id="d-road" value="${esc(b.road || '')}"></label>
       <label class="f" style="max-width:130px"><span>SLK</span><input class="in" id="d-slk" inputmode="decimal" value="${esc(b.slk || '')}"></label></div>
-    <label class="f"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
+    <div class="row wrap" style="align-items:flex-start">
+      <label class="f" style="min-width:140px"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
+      <label class="f" style="min-width:140px"><span>Inspector name</span><input class="in" id="d-inspector" value="${esc(b.inspector || '')}" placeholder="Name" autocomplete="name"></label></div>
     <div class="row"><button class="btn out grow" data-act="edit-details-cancel">Cancel</button><button class="btn grow" data-act="save-details">Save details</button></div></div>` : `<div class="card"><div class="row between"><b>Details</b><button class="btn out sm" data-act="edit-details">Edit details</button></div>
-    <div class="dl">${[['Project number', b.project], ['Bridge / structure No.', b.bridgeNo], ['Road', b.road], ['SLK', b.slk], ['Region', b.region]].map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v || '—')}</b></div>`).join('')}</div></div>`}
+    <div class="dl">${[['Project number', b.project], ['Bridge / structure No.', b.bridgeNo], ['Road', b.road], ['SLK', b.slk], ['Region', b.region], ['Inspector name', b.inspector]].map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v || '—')}</b></div>`).join('')}</div></div>`}
   ${start}
   <div class="sec"><div class="sec-h"><h3>History</h3></div>
     ${list.length ? list.map(i => { const t = tally(i, b);
@@ -1407,7 +1409,7 @@ const A = {
   async 'save-details'() {
     const v = k => $('#d-' + k).value.trim();
     if (!v('bridgeNo')) { toast('Enter the bridge or structure number.'); $('#d-bridgeNo').focus(); return; }
-    await Store.patch('bridges', S.route.id, { project: v('project'), bridgeNo: v('bridgeNo'), road: v('road'), slk: v('slk'), region: v('region') });
+    await Store.patch('bridges', S.route.id, { project: v('project'), bridgeNo: v('bridgeNo'), road: v('road'), slk: v('slk'), region: v('region'), inspector: v('inspector') });
     S.editDetails = false; toast('Details saved.'); render();
   },
   async 'save-gps'() {
