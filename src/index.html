@@ -1199,7 +1199,7 @@ ${S.editDetails ? `  <div class="card"><b>Details</b>
       <label class="f" style="min-width:160px"><span>Road</span><input class="in" id="d-road" value="${esc(b.road || '')}"></label>
       <label class="f" style="max-width:130px"><span>SLK</span><input class="in" id="d-slk" inputmode="decimal" value="${esc(b.slk || '')}"></label></div>
     <label class="f"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
-    <div class="row"><button class="btn ghost grow" data-act="edit-details-cancel">Cancel</button><button class="btn grow" data-act="save-details">Save details</button></div></div>` : `<div class="card"><div class="row between"><b>Details</b><button class="btn out sm" data-act="edit-details">Edit details</button></div>
+    <div class="row"><button class="btn out grow" data-act="edit-details-cancel">Cancel</button><button class="btn grow" data-act="save-details">Save details</button></div></div>` : `<div class="card"><div class="row between"><b>Details</b><button class="btn out sm" data-act="edit-details">Edit details</button></div>
     <div class="dl">${[['Project number', b.project], ['Bridge / structure No.', b.bridgeNo], ['Road', b.road], ['SLK', b.slk], ['Region', b.region]].map(([k, v]) => `<div><span class="sub">${k}</span><b>${esc(v || '—')}</b></div>`).join('')}</div></div>`}
   ${start}
   <div class="sec"><div class="sec-h"><h3>History</h3></div>
@@ -1233,7 +1233,7 @@ function viewChecklist(id) {
   ${S.addLoc ? `<div class="card"><b>Add a location</b>
       <label class="f"><span>Location name</span><input class="in" id="new-loc" placeholder="e.g. Pier 3, Culvert, Downstream bank" autocapitalize="words"></label>
       <label class="f"><span>Items (separate with commas)</span><input class="in" id="new-loc-items" placeholder="e.g. Headstock, Pile x4, Bracing" autocapitalize="sentences" enterkeyhint="done"></label>
-      <div class="row"><button class="btn ghost grow" data-act="add-loc-cancel">Cancel</button><button class="btn grow" data-act="add-loc-save">Add location</button></div></div>` : ''}
+      <div class="row"><button class="btn out grow" data-act="add-loc-cancel">Cancel</button><button class="btn grow" data-act="add-loc-save">Add location</button></div></div>` : ''}
   <div class="sec">${comps.filter(c => c.loc === S.loc).map(c => {
     const it = I[c.id] || {}, s = st(c), sub = [(it.defects || []).slice(0, 3).join(', '), pc[c.id] ? `${pc[c.id]} photo${pc[c.id] > 1 ? 's' : ''}` : '', it.comment ? '“' + it.comment.slice(0, 40) + (it.comment.length > 40 ? '…' : '') + '”' : ''].filter(Boolean).join(' · ') || c.ph + '.jpg';
     return `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
@@ -1242,7 +1242,7 @@ function viewChecklist(id) {
   }).join('')}</div>
   ${S.addItem ? `<div class="card"><b>Add an item to ${esc(locLabel(S.loc) || 'General')}</b>
       <label class="f"><span>Item name</span><input class="in" id="new-item" placeholder="e.g. Scour protection, or Pile x4" autocapitalize="sentences" enterkeyhint="done"></label>
-      <div class="row"><button class="btn ghost grow" data-act="add-item-cancel">Cancel</button><button class="btn grow" data-act="add-item-save">Add item</button></div></div>`
+      <div class="row"><button class="btn out grow" data-act="add-item-cancel">Cancel</button><button class="btn grow" data-act="add-item-save">Add item</button></div></div>`
     : `<button class="btn out block" data-act="add-item">+ Add an item to ${esc(locLabel(S.loc) || 'General')}</button>`}
   <button class="btn dark block" data-act="open-review" data-id="${esc(id)}">Review &amp; finish</button>`;
 }
@@ -1288,7 +1288,7 @@ function viewComponent(inspId, cid) {
       <div class="row"><label class="f grow"><span class="sr">Defect</span><input class="in" id="new-defect" placeholder="e.g. Bolt corrosion, Bird nesting" autocapitalize="sentences" enterkeyhint="done"></label><button class="btn" data-act="add-defect-save">Add</button></div>
       ${(() => { const mine = lsGet('bsi-defects-' + typeOf(b), []); return mine.length ? `<span class="sub">Your saved defects for ${esc(TEMPLATES[typeOf(b)].name.toLowerCase())}s (tap ✕ to remove from the list):</span>
         <div class="mg-items">${mine.map(x => `<span class="mg-it">${esc(x)}<button data-act="del-defect" data-v="${esc(x)}" aria-label="Remove ${esc(x)} from the list">✕</button></span>`).join('')}</div>` : ''; })()}
-      <button class="btn ghost sm" data-act="add-defect-cancel">Close</button></div>` : ''}</div>
+      <button class="btn out sm" data-act="add-defect-cancel">Close</button></div>` : ''}</div>
   <div class="sec"><div class="sec-h"><h3>Comments</h3>${ro ? '' : `<button class="btn out sm" data-act="dictate" data-for="cmt">${ICON.mic} Speak</button>`}</div>
     <label class="f"><span class="sr">Comments</span><textarea class="in" id="cmt" data-in="comment" autocapitalize="sentences" spellcheck="true" placeholder="Type, or tap Speak and use the microphone on your keyboard. E.g. 300 mm crack at mid-span, upstream face" ${dis}>${esc(it.comment)}</textarea></label></div>
   <div class="sec"><div class="sec-h"><h3>Photos (${photos.length})</h3></div>
@@ -1328,7 +1328,7 @@ function viewReview(id) {
   ${done ? '' : S.confirm === 'finish' ? `<div class="card fin" role="group" aria-labelledby="fin-h"><b id="fin-h" style="font-size:17px">Confirm before finishing</b>
       <span class="sub" style="color:var(--ink)">${t.done} of ${t.total} components inspected · ${t.def} with defects · ${t.photos} photos${todo ? ` · <b style="color:var(--danger)">${todo} not inspected</b>` : ''}</span>
       <span class="sub">The inspection will be marked complete and the Word report and pictures exported. You can still make changes afterwards.</span>
-      <div class="row"><button class="btn ghost grow" data-act="cancel">Go back</button><button class="btn grow" id="finish-btn" data-act="finish" data-id="${esc(id)}">Finish</button></div></div>`
+      <div class="row"><button class="btn out grow" data-act="cancel">Go back</button><button class="btn grow" id="finish-btn" data-act="finish" data-id="${esc(id)}">Finish</button></div></div>`
     : `<button class="btn block" data-act="ask" data-what="finish">Complete inspection</button>`}
   <div class="sec"><div class="sec-h"><h3>Export</h3></div>
     <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
