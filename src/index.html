@@ -115,8 +115,7 @@ h2.hero{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height
 /* Badges and pills */
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
 .b-ok{background:var(--ok);color:var(--ok-ink)} .b-def{background:var(--def);color:var(--def-ink)} .b-na{background:var(--well);color:var(--muted)} .b-note{background:var(--well)}
-.b-todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--danger);color:var(--danger)}
-.tap .badge.b-ok,.tap .badge.b-def,.tap .badge.b-na,.tap .badge.b-note{background:var(--ok);color:var(--ok-ink)}
+.b-todo{background:transparent;box-shadow:inset 0 0 0 1.5px var(--link);color:var(--link)}
 .st-todo{color:var(--danger);font-weight:700} .st-done{color:var(--ok-ink);font-weight:700}
 .pill{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--well);white-space:nowrap}
 .pill.hot{background:var(--hi);color:var(--hi-ink)}
@@ -1220,7 +1219,7 @@ function viewChecklist(id) {
     <div class="prog" role="img" aria-label="${t.done} of ${t.total} inspected, ${t.def} with defects"><i style="width:${t.def / t.total * 100}%;background:var(--def)"></i><i style="width:${(t.done - t.def) / t.total * 100}%;background:var(--ink)"></i></div></div>
   <div class="chips loc" role="tablist" aria-label="Location">
     ${locs.map(l => { const left = comps.filter(c => c.loc === l && !st(c).done).length;
-      return `<button class="chip${left ? '' : ' alldone'}" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${left ? '' : ICON.check + ' '}${locLabel(l)}</button>`; }).join('')}
+      return `<button class="chip" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${locLabel(l)}${left ? ' · ' + left : ' ✓'}</button>`; }).join('')}
     <button class="chip addloc" data-act="add-loc" aria-label="Add a location">+ Add location</button>
   </div>
   ${S.addLoc ? `<div class="card"><b>Add a location</b>
