@@ -25,7 +25,7 @@
   --link:#2F6FDE; --danger:#E5484D; --field:#FFFFFF; --field-line:#E6E8EE; --press:#F7F8FA;
   --ok:#DFF3E5; --ok-ink:#1D6B3A; --def:#FFE4CC; --def-ink:#9A4A0B; --def-bar:#F08A3E;
   --t-timber:#FDE8DA; --t-timber-ink:#B8582A; --t-concrete:#E3ECFA; --t-concrete-ink:#2F62B0;
-  --t-steel:#ECE6FA; --t-steel-ink:#6A4FC0; --t-underpass:#E0F3E8; --t-underpass-ink:#2B8653;
+  --t-steel:#ECE6FA; --t-steel-ink:#6A4FC0; --t-underpass:#E0F3E8; --t-underpass-ink:#2B8653; --t-custom:#FDE7EF; --t-custom-ink:#B4386A;
   --shadow:0 6px 22px rgba(22,24,29,.07); --shadow-sm:0 2px 8px rgba(22,24,29,.06);
   --r:20px;
   --sans:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -38,7 +38,7 @@
   --link:#7FA8FF; --danger:#FF6B6B; --field:#15181D; --field-line:#2A2F38; --press:#20242B;
   --ok:#1E3A28; --ok-ink:#9BE3B2; --def:#3D2A1A; --def-ink:#FFB27A; --def-bar:#E58A45;
   --t-timber:#3A2A20; --t-timber-ink:#F2A776; --t-concrete:#1F2C42; --t-concrete-ink:#8DB4F5;
-  --t-steel:#2A2440; --t-steel-ink:#B9A4F5; --t-underpass:#1B3326; --t-underpass-ink:#86D6A6;
+  --t-steel:#2A2440; --t-steel-ink:#B9A4F5; --t-underpass:#1B3326; --t-underpass-ink:#86D6A6; --t-custom:#3A1F2A; --t-custom-ink:#F29BBE;
   --shadow:0 6px 22px rgba(0,0,0,.35); --shadow-sm:0 2px 8px rgba(0,0,0,.3);
   color-scheme:dark }}
 *{box-sizing:border-box}
@@ -167,7 +167,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .brow .when{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink);margin-top:8px}
 .ticon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;flex:0 0 auto}
 .t-timber{background:var(--t-timber);color:var(--t-timber-ink)} .t-concrete{background:var(--t-concrete);color:var(--t-concrete-ink)}
-.t-steel{background:var(--t-steel);color:var(--t-steel-ink)} .t-underpass{background:var(--t-underpass);color:var(--t-underpass-ink)}
+.t-steel{background:var(--t-steel);color:var(--t-steel-ink)} .t-underpass{background:var(--t-underpass);color:var(--t-underpass-ink)} .t-custom{background:var(--t-custom);color:var(--t-custom-ink)}
 .tico{display:inline-flex}
 .folders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (min-width:640px){.folders{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -200,7 +200,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .sdot.busy{background:var(--hi);box-shadow:0 0 0 4px color-mix(in srgb, var(--hi) 25%, transparent)}
 .sdot.off{background:#9AA1AD;box-shadow:0 0 0 4px color-mix(in srgb, #9AA1AD 22%, transparent)}
 .sdot.err{background:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb, var(--danger) 20%, transparent)}
-.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px} .tiles .tile.t-custom{grid-column:1/-1}
 @media (max-width:340px){.tiles{grid-template-columns:minmax(0,1fr)}}
 .tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:16px;text-align:left;padding:16px;border:0;border-radius:var(--r);cursor:pointer;min-height:132px;color:var(--ink)}
 .tile .ticon{background:var(--card)}
@@ -236,6 +236,10 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 /* Picture report (PC) */
 .lockc .lock-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--well);flex:0 0 auto}
 .sec-h .more svg{width:14px;height:14px;vertical-align:-2px}
+.mg-items{display:flex;flex-wrap:wrap;gap:6px}
+.mg-it{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:5px 6px 5px 12px;font-size:14px}
+.mg-it button{border:0;background:var(--card);color:var(--ink);width:24px;height:24px;border-radius:999px;cursor:pointer;font-size:11px}
+.credit a{color:inherit}
 .credit{margin:8px 0 0;text-align:center;font-size:12px;letter-spacing:.04em;color:var(--muted);opacity:.85}
 body.wide .credit{grid-column:1/-1;padding:12px 0 20px}
 .desk-only{display:none} @media (min-width:900px){.desk-only{display:flex}}
@@ -329,6 +333,7 @@ const ICONS = {
   concrete: '<path d="M3 8h58v7H3zM10 15l6 5h32l6-5M22 20v16M42 20v16M17 36h10M37 36h10"/>',
   steel: '<path d="M3 26h58M3 26L11 8h42l8 18M11 8l8 18 9-18 8 18 9-18 8 18M15 26v10M49 26v10"/>',
   underpass: '<path d="M3 8h58M3 13h58M14 36V18h36v18M18 36V22h28v14M3 36h58M28 31h8"/>',
+  custom: '<path d="M3 10h58M3 15h58M9 15v21M55 15v21M24 21l14 14M38 21l3 3-14 14h-3v-3z"/>',
 };
 const TEMPLATES = {
   timber: {
@@ -355,12 +360,34 @@ const TEMPLATES = {
     choices: [['form', 'Structure form', [['box', 'Box units'], ['arch', 'Arch'], ['slab', 'Slab on walls']]]],
     defects: ['Cracking', 'Spalling', 'Exposed reinforcement', 'Water ingress / seepage', 'Efflorescence / leaching', 'Joint opening / failure', 'Settlement / misalignment', 'Drainage blocked', 'Ponding', 'Lighting fault', 'Graffiti / vandalism', 'Debris / litter', 'Scour at inlet / outlet', 'Impact damage'],
   },
+  custom: {
+    name: 'Custom bridge', tile: 'Manual set-up', blurb: 'Type your own locations and items',
+    params: [], choices: [],
+    defects: ['Cracking', 'Spalling', 'Exposed reinforcement', 'Corrosion', 'Section loss', 'Coating breakdown', 'Rot / decay', 'Splitting', 'Deformation', 'Loose / missing parts', 'Settlement / movement', 'Scour', 'Water ingress / seepage', 'Drainage blocked', 'Impact damage', 'Debris / vegetation', 'Graffiti / vandalism'],
+  },
 };
+/* Manual set-up: the inspector types the locations and items. Location codes start with "M" and their
+   names are kept in LOCN so labels, captions and the Word report show the typed names. */
+const LOCN = {};
+const safeName = t => String(t || '').replace(/[^A-Za-z0-9]+/g, '').slice(0, 24);
+function refreshLocNames() { Store.all('bridges').forEach(b => (b.layout?.groups || []).forEach(g => { if (g.k !== 'GEN') LOCN[g.k] = g.name || 'Location'; })); }
 const LEVELS = { 1: 'Level 1 · Routine', 2: 'Level 2 · Detailed' };
 const typeOf = b => TEMPLATES[b?.type] ? b.type : 'timber';
 
 function generateComponents(type, l) {
   const out = []; let order = 0;
+  if (type === 'custom') {
+    const used = new Set();
+    (l.groups || []).forEach((g, gi) => {
+      if (g.k !== 'GEN') LOCN[g.k] = g.name || 'Location';
+      const pre = g.k === 'GEN' ? 'General' : (safeName(g.name) || 'Location' + gi);
+      g.items.forEach((it, ii) => {
+        let ph = pre + '_' + (safeName(it.name) || 'Item' + (ii + 1)); while (used.has(ph)) ph += 'x'; used.add(ph);
+        out.push({ id: it.id, code: `${gi + 1}.${ii + 1}`, loc: g.k, o: gi, name: it.name, ph });
+      });
+    });
+    return out;
+  }
   const add = (loc, code, name, ph) => out.push({ id: code.replace(/\//g, '_'), code, loc, o: order, name, ph });
   const A = a => 'Abut' + a.slice(1), Sp = s => 'Span' + s.slice(1), Pi = p => 'Pier' + p.slice(1);
   const walkSpans = (abut, span, pier) => { order++; abut('A1'); for (let s = 1; s <= l.spans; s++) { order++; span('S' + s); if (s < l.spans) { order++; pier('P' + s); } } order++; abut('A2'); };
@@ -443,12 +470,13 @@ function generateComponents(type, l) {
   }
   return out;
 }
-const locLabel = l => l === 'GEN' ? 'General' : ({ A: 'Abut ', S: 'Span ', P: 'Pier ', E: 'Entry ', U: 'Unit ' }[l[0]] || '') + l.slice(1);
-const locFull = l => l === 'GEN' ? '' : ({ A: 'Abutment', S: 'Span', P: 'Pier', E: 'Entry', U: 'Unit' }[l[0]] || l[0]) + ' ' + l.slice(1);
+const locLabel = l => l === 'GEN' ? 'General' : l[0] === 'M' ? (LOCN[l] || 'Location') : ({ A: 'Abut ', S: 'Span ', P: 'Pier ', E: 'Entry ', U: 'Unit ' }[l[0]] || '') + l.slice(1);
+const locFull = l => l === 'GEN' ? '' : l[0] === 'M' ? (LOCN[l] || 'Location') : ({ A: 'Abutment', S: 'Span', P: 'Pier', E: 'Entry', U: 'Unit' }[l[0]] || l[0]) + ' ' + l.slice(1);
 const compFull = c => c.name.replace(/^(Pile|Stringer|Girder|Steel girder|Column) (\d+)$/, '$1 No.$2');
 
 function factsOf(b) {
   const t = typeOf(b), L = b.layout || {};
+  if (t === 'custom') return [['Type', 'Custom (manual set-up)'], ['Locations', String((L.groups || []).filter(g => g.items.length).length)]];
   if (t === 'timber') return [['Type', 'Timber'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Piers', `${L.spans - 1} · ${L.pilesPerPier} piles each`], ['Stringers', `${L.stringersPerSpan} per span`], ['Abutments', L.abutType === 'bedlog' ? 'Bedlog' : 'Sill beam + sheeting'], ['Corbels', L.corbels === 'no' ? 'No' : 'Yes']];
   if (t === 'underpass') return [['Type', 'Underpass'], ['Units', `${L.units} · Entry 1 → Entry 2`], ['Form', { box: 'Box units', arch: 'Arch', slab: 'Slab on walls' }[L.form || 'box']]];
   return [['Type', t === 'steel' ? 'Steel' : 'Concrete'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Girders', L.girdersPerSpan ? `${L.girdersPerSpan} per span` : 'Slab deck'], ['Piers', `${L.spans - 1} · ${L.columnsPerPier} column${L.columnsPerPier > 1 ? 's' : ''} each`], ...(t === 'steel' ? [['Deck', { concrete: 'Concrete', steel: 'Steel', timber: 'Timber' }[L.deckType || 'concrete']]] : [])];
@@ -789,7 +817,7 @@ function getFix(timeout = 10000) {
    ========================================================================= */
 function setBar(title, backLabel) { $('#title').textContent = title; $('#back').hidden = !backLabel; $('#back-l').textContent = backLabel || ''; }
 function render() {
-  const r = S.route, v = $('#view');
+  const r = S.route, v = $('#view'); refreshLocNames();
   try {
     const tabbed = ['home', 'inspections', 'photos', 'photofolder', 'data'].includes(r.name);
     document.body.classList.toggle('home', r.name === 'home');
@@ -808,7 +836,7 @@ function render() {
     else if (r.name === 'component') v.innerHTML = viewComponent(r.id, r.cid);
     else if (r.name === 'review') v.innerHTML = viewReview(r.id);
     else if (r.name === 'layout') { v.innerHTML = viewLayout(r.id); prAfter(); }
-    v.insertAdjacentHTML('beforeend', '<p class="credit">Developed by NS</p>');
+    v.insertAdjacentHTML('beforeend', '<p class="credit">Developed by NS · For feedback and queries, email <a href="mailto:napong.subanpong@outlook.com">napong.subanpong@outlook.com</a></p>');
   } catch (e) { console.error(e); v.innerHTML = `<div class="card warn"><b>Something went wrong showing this screen.</b><span class="sub">${esc(e.message)}</span><button class="btn out" data-act="home">Back to start</button></div>`; }
   if (S.lastCid && (r.name === 'checklist' || r.name === 'review')) {
     const row = v.querySelector(`[data-act="open-comp"][data-cid="${CSS.escape(S.lastCid)}"]`);
@@ -849,7 +877,7 @@ function viewHome() {
 
   <button class="pr-cta desk-only" data-act="open-layout">
     <span class="pr-cta-ic" aria-hidden="true">${ICON.doc}</span>
-    <span class="pr-cta-tx"><b>Picture report for Word</b><span>Arrange photos on A4 pages · two per page · numbered captions</span></span>
+    <span class="pr-cta-tx"><b>Inspection Photos Export for MS Word</b><span>Arrange photos on A4 pages · two per page · numbered captions</span></span>
     <span class="pr-cta-go">Open ${ICON.chev}</span>
   </button>`;
 }
@@ -869,7 +897,7 @@ function syncBoxHtml() {
 }
 function typeTiles() {
   return `<div class="tiles">${Object.entries(TEMPLATES).map(([k, t]) => `
-    <button class="tile t-${k}" data-act="new" data-type="${k}" aria-label="Set up a new ${esc(t.name.toLowerCase())}">${tIcon(k)}<b>${esc(t.name)}</b></button>`).join('')}</div>`;
+    <button class="tile t-${k}" data-act="new" data-type="${k}" aria-label="${k === 'custom' ? 'Set up a bridge manually' : 'Set up a new ' + esc(t.name.toLowerCase())}">${tIcon(k)}<b>${esc(t.tile || t.name)}</b></button>`).join('')}</div>`;
 }
 function inspRow(i) {
   const b = Store.get('bridges', i.bridgeId); if (!b) return '';
@@ -952,7 +980,7 @@ function viewPhotoFolder(bridgeId) {
   const byInsp = {};
   list.forEach((x, k) => (byInsp[x.insp.id] = byInsp[x.insp.id] || { insp: x.insp, items: [] }).items.push({ ...x, k }));
   return `<div class="row" style="gap:12px">${tIcon(typeOf(b))}<div class="grow"><b style="font-size:18px">${esc(typeShort(b))} ${esc(b.bridgeNo)}</b><br><span class="sub">${b.project ? 'Project ' + esc(b.project) + ' · ' : ''}${esc(bridgeTitle(b))}</span></div>${syncPill(list)}</div>
-  ${Object.values(byInsp).map(({ insp, items }) => `<div class="sec"><div class="sec-h"><h3>${esc(LEVELS[insp.level])}</h3><span class="sub">${fmtDate(insp.startedAt)} · ${items.length}</span><button class="more" data-act="open-layout" data-id="${esc(insp.id)}">Picture report</button></div>
+  ${Object.values(byInsp).map(({ insp, items }) => `<div class="sec"><div class="sec-h"><h3>${esc(LEVELS[insp.level])}</h3><span class="sub">${fmtDate(insp.startedAt)} · ${items.length}</span><button class="more" data-act="open-layout" data-id="${esc(insp.id)}">Export for Word</button></div>
     <div class="photos">${items.map(x => { const st = photoSync(x.id);
       return `<button class="ph" data-act="lb-open" data-k="${x.k}" aria-label="${esc(x.name)}, ${esc(st.label)}"><img alt="" src="${esc(Store.photoSrc(x.id))}" data-pid="${esc(x.id)}">
         <span class="psync ${st.cls}" aria-hidden="true">${st.cls === 'wait' ? ICON.clock : st.cls === 'ok' ? ICON.check : ICON.phone}</span><span class="pname">${esc(x.name)}.jpg</span></button>`; }).join('')}</div></div>`).join('')}`;
@@ -1058,18 +1086,33 @@ function mergeComponents(b, bid, fresh) {
     removed: b.components.filter(c => !ids.has(c.id) && !c.custom && !compHasData(bid, c.id)).length };
 }
 function editForm(b, bid) {
-  const f = { ...newForm(typeOf(b)), ...(b.layout || {}), project: b.project || '', bridgeNo: b.bridgeNo || '', road: b.road || '', slk: b.slk || '', region: b.region || '', editId: bid };
+  const f = { ...newForm(typeOf(b)), ...JSON.parse(JSON.stringify(b.layout || {})), project: b.project || '', bridgeNo: b.bridgeNo || '', road: b.road || '', slk: b.slk || '', region: b.region || '', editId: bid };
   return f;
 }
 function newForm(type) {
   const T = TEMPLATES[type], f = { type, project: '', bridgeNo: '', road: '', slk: '', region: '' };
   T.params.forEach(([k, , , , d]) => f[k] = d); T.choices.forEach(([k, , opts]) => f[k] = opts[0][0]);
+  if (type === 'custom') f.groups = [{ k: 'GEN', name: 'General', items: [] }, { k: 'M' + uid(), name: '', items: [] }];
   return f;
+}
+// Manual set-up builder: locations, each with its own list of items. "Pile x4" adds Pile 1 … Pile 4.
+function manualBuilder(f) {
+  return `<div class="sec"><div class="sec-h"><h3>Locations &amp; items</h3><span class="sub">${f.groups.reduce((a, g) => a + g.items.length, 0)} items</span></div>
+    <span class="sub">Add a location (e.g. Abutment 1, Span 1, Pier 1), then its items. Tip: type <b>Pile x4</b> to add Pile 1 to Pile 4 at once.</span>
+    ${f.groups.map((g, gi) => `<div class="card mg">
+      <div class="row">${g.k === 'GEN' ? '<b class="grow" style="font-size:16px">General</b>'
+        : `<label class="f grow"><span class="sr">Location name</span><input class="in" data-in="mg-name" data-g="${gi}" value="${esc(g.name)}" placeholder="Location name, e.g. Abutment 1"></label>
+           <button class="icb soft" data-act="mg-move" data-g="${gi}" data-v="-1" aria-label="Move location up" ${gi > 1 ? '' : 'disabled'}>↑</button>
+           <button class="icb soft" data-act="mg-del" data-g="${gi}" aria-label="Remove location">✕</button>`}</div>
+      ${g.items.length ? `<div class="mg-items">${g.items.map((it, ii) => `<span class="mg-it"><span class="mono sub">${gi + 1}.${ii + 1}</span> ${esc(it.name)}<button data-act="mg-item-del" data-g="${gi}" data-i="${ii}" aria-label="Remove ${esc(it.name)}">✕</button></span>`).join('')}</div>` : '<span class="sub">No items yet.</span>'}
+      <div class="row"><label class="f grow"><span class="sr">New item</span><input class="in" id="mg-new-${gi}" data-g="${gi}" placeholder="${g.k === 'GEN' ? 'e.g. Guardrail, Approach' : 'e.g. Halfcap, or Pile x4'}" enterkeyhint="done"></label><button class="btn out sm" style="min-height:48px" data-act="mg-item-add" data-g="${gi}">Add</button></div>
+    </div>`).join('')}
+    <button class="btn out block" data-act="mg-add">+ Add location</button>`;
 }
 function viewAdd() {
   const f = S.form, T = TEMPLATES[f.type];
   const eb = f.editId && Store.get('bridges', f.editId);
-  setBar(eb ? 'Edit set-up' : 'Set up ' + T.name.toLowerCase(), eb ? 'Bridge' : 'Start');
+  setBar(eb ? 'Edit set-up' : f.type === 'custom' ? 'Manual set-up' : 'Set up ' + T.name.toLowerCase(), eb ? 'Bridge' : 'Start');
   const comps = generateComponents(f.type, f), mg = eb ? mergeComponents(eb, f.editId, comps) : null, locs = [...new Set(comps.filter(c => c.loc !== 'GEN').map(c => c.loc))];
   const stepper = ([k, label, min, max]) => `<div class="step"><span class="l">${label}</span>
     <button data-act="step" data-k="${k}" data-d="-1" data-min="${min}" data-max="${max}" aria-label="Decrease ${label}">−</button><b>${f[k]}</b>
@@ -1086,8 +1129,8 @@ function viewAdd() {
       <label class="f" style="max-width:140px"><span>SLK</span><input class="in" id="f-slk" data-in="form" data-k="slk" value="${esc(f.slk)}" inputmode="decimal" placeholder="0.00"></label></div>
     <label class="f"><span>Region</span><input class="in" id="f-region" data-in="form" data-k="region" value="${esc(f.region)}" placeholder="Region"></label>
   </div>
-  <div class="sec"><div class="sec-h"><h3>Layout · numbered in the direction of increasing SLK</h3></div>
-    <div class="card" style="gap:0">${T.params.map(stepper).join('')}</div>
+  ${f.type === 'custom' ? manualBuilder(f) : `<div class="sec"><div class="sec-h"><h3>Layout · numbered in the direction of increasing SLK</h3></div>
+    <div class="card" style="gap:0">${T.params.map(stepper).join('')}</div>`}
     ${T.choices.map(([k, label, opts]) => `<span class="sub">${label}</span><div class="seg" role="group" aria-label="${esc(label)}">${opts.map(([v, l]) => `<button aria-pressed="${f[k] === v}" data-act="form-set" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join('')}</div>`).join('')}
   </div>
   ${eb ? `<div class="card"><b>${mg.list.length} components after saving</b>
@@ -1245,7 +1288,7 @@ function viewReview(id) {
     <button class="btn ${done ? '' : 'out'} block" data-act="pkg" data-id="${esc(id)}">${done ? 'Export Word report + pictures (ZIP)' : 'Export draft Word report + pictures (ZIP)'}</button>
     <span class="sub">One folder named <span class="mono">${esc(pkgName(insp, b))}</span> with the Word report (summary table, then each picture captioned “Picture 1: Abutment 1 Pile No.1 - …”), every picture as its own file in <span class="mono">Photos/</span> (${t.photos ? esc(Object.values(names).slice(0, 2).join('.jpg, ')) + '.jpg …' : esc(b.components.filter(c => c.loc !== 'GEN').slice(0, 2).map(c => c.ph + '.jpg').join(', ') + ' …')}) and a picture index. Works offline.</span>
     <div class="row wrap"><button class="btn out sm" data-act="docx" data-id="${esc(id)}">Word report only</button><button class="btn out sm" data-act="pics" data-id="${esc(id)}">Pictures only (ZIP)</button><button class="btn out sm" data-act="save-all-photos" data-id="${esc(id)}">${ICON.img} ${isAndroid() ? 'Save all pictures to gallery' : 'Save all pictures to Photos'}</button><button class="btn ghost sm" data-act="json" data-id="${esc(id)}">JSON</button></div>
-    <button class="btn out block" data-act="open-layout" data-id="${esc(id)}">${ICON.doc} Picture report – arrange pictures for Word (PC / laptop)</button></div>
+    <button class="btn out block" data-act="open-layout" data-id="${esc(id)}">${ICON.doc} Inspection Photos Export for MS Word (PC / laptop)</button></div>
   ${S.confirm === 'del-insp' ? `<div class="confirm"><span class="grow">Delete this inspection and its photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-insp" data-id="${esc(id)}">Delete</button></div>`
     : `<button class="btn ghost" data-act="ask" data-what="del-insp">Delete inspection</button>`}`;
 }
@@ -1276,11 +1319,27 @@ const A = {
   },
   'open-bridge'(d) { S.level = 2; nav({ name: 'bridge', id: d.id }); },
   step(d) { const f = S.form; f[d.k] = Math.min(+d.max, Math.max(+d.min, f[d.k] + +d.d)); render(); },
+  'mg-add'() { S.form.groups.push({ k: 'M' + uid(), name: '', items: [] }); render(); setTimeout(() => document.querySelector(`[data-in="mg-name"][data-g="${S.form.groups.length - 1}"]`)?.focus(), 30); },
+  'mg-del'(d) { const g = S.form.groups[+d.g]; if (g.items.length && !confirm(`Remove “${g.name || 'this location'}” and its ${g.items.length} item(s)?`)) return; S.form.groups.splice(+d.g, 1); render(); },
+  'mg-move'(d) { const G = S.form.groups, i = +d.g, j = i + +d.v; if (j < 1 || j >= G.length) return; [G[i], G[j]] = [G[j], G[i]]; render(); },
+  'mg-item-add'(d) {
+    const el = $('#mg-new-' + d.g), t = (el?.value || '').trim(); if (!t) { el?.focus(); return; }
+    const g = S.form.groups[+d.g], m = t.match(/^(.*?)\s*[x×]\s*(\d{1,2})$/i);
+    const names = m && +m[2] > 0 ? Array.from({ length: +m[2] }, (_, k) => `${m[1].trim()} ${k + 1}`) : [t];
+    names.forEach(name => g.items.push({ id: 'I' + uid(), name }));
+    render(); setTimeout(() => $('#mg-new-' + d.g)?.focus(), 30);
+  },
+  'mg-item-del'(d) { S.form.groups[+d.g].items.splice(+d.i, 1); render(); },
   'form-set'(d) { S.form[d.k] = d.v; render(); },
   async 'save-bridge'() {
     const f = S.form, T = TEMPLATES[f.type];
     if (!f.bridgeNo.trim()) { toast('Enter the bridge or structure number.'); $('#f-bridgeNo').focus(); return; }
     const layout = {}; T.params.forEach(([k]) => layout[k] = f[k]); T.choices.forEach(([k]) => layout[k] = f[k]);
+    if (f.type === 'custom') {
+      f.groups.forEach((g, i) => { if (g.k !== 'GEN' && !g.name.trim()) g.name = 'Location ' + i; });
+      if (!f.groups.some(g => g.items.length)) { toast('Add at least one item.'); return; }
+      layout.groups = JSON.parse(JSON.stringify(f.groups));
+    }
     const eb = f.editId && Store.get('bridges', f.editId);
     if (eb) {
       const { list } = mergeComponents(eb, f.editId, generateComponents(f.type, layout));
@@ -1437,6 +1496,7 @@ function flushReview() {
 const IN = {
   q(el) { S.q = el.value; $('#blist').innerHTML = bridgeList(); },
   form(el) { S.form[el.dataset.k] = el.value; },
+  'mg-name'(el) { S.form.groups[+el.dataset.g].name = el.value; },
   comment(el) { S.draft.it.comment = el.value; touchDraft(); },
   review() { clearTimeout(reviewT); reviewT = setTimeout(flushReview, 600); },
 };
@@ -1484,7 +1544,7 @@ const prImgStyle = x => { const box = x.full ? PR_BOX.full : PR_BOX.half, s = (x
 
 function viewLayout(id) {
   PR.sideTop = $('.pr-side')?.scrollTop || 0;
-  setBar('Picture report', 'Back');
+  setBar('Inspection Photos Export for MS Word', 'Back');
   const all = prInspections();
   let insp = id && Store.get('inspections', id);
   if (!insp || !photosOf(insp).length) {
@@ -1664,7 +1724,7 @@ async function prExport() {
     if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
   } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } if (e.key === 'Enter' && e.target.id?.startsWith('mg-new-')) { e.preventDefault(); A['mg-item-add'](e.target.dataset); } });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
 document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
 window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
