@@ -236,6 +236,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 /* Picture report (PC) */
 .lockc .lock-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--well);flex:0 0 auto}
 .sec-h .more svg{width:14px;height:14px;vertical-align:-2px}
+.chips.loc .chip.addloc{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
 .mg-items{display:flex;flex-wrap:wrap;gap:6px}
 .mg-it{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:5px 6px 5px 12px;font-size:14px}
 .mg-it button{border:0;background:var(--card);color:var(--ink);width:24px;height:24px;border-radius:999px;cursor:pointer;font-size:11px}
@@ -370,7 +371,7 @@ const TEMPLATES = {
    names are kept in LOCN so labels, captions and the Word report show the typed names. */
 const LOCN = {};
 const safeName = t => String(t || '').replace(/[^A-Za-z0-9]+/g, '').slice(0, 24);
-function refreshLocNames() { Store.all('bridges').forEach(b => (b.layout?.groups || []).forEach(g => { if (g.k !== 'GEN') LOCN[g.k] = g.name || 'Location'; })); }
+function refreshLocNames() { Store.all('bridges').forEach(b => { (b.layout?.groups || []).forEach(g => { if (g.k !== 'GEN') LOCN[g.k] = g.name || 'Location'; }); Object.assign(LOCN, b.locNames || {}); }); }
 const LEVELS = { 1: 'Level 1 · Routine', 2: 'Level 2 · Detailed' };
 const typeOf = b => TEMPLATES[b?.type] ? b.type : 'timber';
 
@@ -741,7 +742,7 @@ function onRemoteChange() {
 const S = { hIdx: 0, newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
 function nav(route, replace) {
   if (!replace) { S.stack.push(S.route); S.hIdx++; try { history.pushState({ idx: S.hIdx }, ''); } catch {} }
-  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; render(); window.scrollTo(0, 0);
+  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; S.addLoc = false; render(); window.scrollTo(0, 0);
 }
 /* Leaving a component (Done or Back): hand its new camera photos to the phone in one go.
    iPhone: the tap that leaves the screen opens the share sheet; iPhone asks once ("Save Images"),
@@ -1069,6 +1070,33 @@ function viewData() {
 /* Editing a bridge's set-up keeps everything already recorded: components keep their IDs, and any
    component that the new layout drops is kept if an inspection has findings or photos for it.
    Items added by hand (custom) are always kept. */
+// "Pile x4" → Pile 1 … Pile 4
+function expandNames(t) { const m = t.match(/^(.*?)\s*[x×]\s*(\d{1,2})$/i); return m && +m[2] > 0 ? Array.from({ length: +m[2] }, (_, k) => `${m[1].trim()} ${k + 1}`) : [t]; }
+// Add items (and, with locName, a new location) to a bridge during an inspection. Returns the first new item's id.
+async function addItems(bid, loc, names, locName) {
+  const b = Store.get('bridges', bid); if (!b) return null;
+  if (locName != null) LOCN[loc] = locName;
+  if (typeOf(b) === 'custom') {
+    const layout = JSON.parse(JSON.stringify(b.layout || { groups: [] }));
+    let g = layout.groups.find(x => x.k === loc); if (!g) layout.groups.push(g = { k: loc, name: locName || LOCN[loc] || 'Location', items: [] });
+    const add = names.map(name => ({ id: 'I' + uid(), name })); g.items.push(...add);
+    await Store.put('bridges', bid, { ...b, layout, components: mergeComponents(b, bid, generateComponents('custom', layout)).list });
+    return add[0].id;
+  }
+  const list = [...b.components], same = list.filter(c => c.loc === loc);
+  const prefix = loc === 'GEN' ? 'General' : loc[0] === 'M' ? (safeName(locName || LOCN[loc]) || 'Location') : ((same.find(c => !c.custom) || same[0])?.ph || loc).split('_')[0];
+  let at = -1; list.forEach((x, k) => { if (x.loc === loc) at = k; }); if (at < 0) at = list.length - 1;
+  let n = same.filter(c => c.custom).length, firstId = null;
+  for (const name of names) {
+    n++; const code = loc === 'GEN' ? 'X' + n : loc[0] === 'M' ? '+' + n : `${loc}-X${n}`;
+    let ph = prefix + '_' + (safeName(name) || 'Item' + n); while (list.some(c => c.ph === ph)) ph += 'x';
+    const c = { id: 'I' + uid(), code, loc, name, ph, custom: true }; firstId = firstId || c.id;
+    list.splice(++at, 0, c);
+  }
+  const locNames = { ...(b.locNames || {}) }; if (locName != null) locNames[loc] = locName;
+  await Store.put('bridges', bid, { ...b, components: list, locNames });
+  return firstId;
+}
 function compHasData(bridgeId, cid) {
   return inspectionsFor(bridgeId).some(i => { const it = itemsOf(i)[cid]; return (it && ((it.defects || []).length || it.none || it.na || it.comment)) || photosOf(i, cid).length; });
 }
@@ -1193,7 +1221,12 @@ function viewChecklist(id) {
   <div class="chips loc" role="tablist" aria-label="Location">
     ${locs.map(l => { const left = comps.filter(c => c.loc === l && !st(c).done).length;
       return `<button class="chip${left ? '' : ' alldone'}" role="tab" aria-selected="${l === S.loc}" aria-pressed="${l === S.loc}" data-act="loc" data-loc="${l}">${left ? '' : ICON.check + ' '}${locLabel(l)}</button>`; }).join('')}
+    <button class="chip addloc" data-act="add-loc" aria-label="Add a location">+ Add location</button>
   </div>
+  ${S.addLoc ? `<div class="card"><b>Add a location</b>
+      <label class="f"><span>Location name</span><input class="in" id="new-loc" placeholder="e.g. Pier 3, Culvert, Downstream bank" autocapitalize="words"></label>
+      <label class="f"><span>Items (separate with commas)</span><input class="in" id="new-loc-items" placeholder="e.g. Headstock, Pile x4, Bracing" autocapitalize="sentences" enterkeyhint="done"></label>
+      <div class="row"><button class="btn ghost grow" data-act="add-loc-cancel">Cancel</button><button class="btn grow" data-act="add-loc-save">Add location</button></div></div>` : ''}
   <div class="sec">${comps.filter(c => c.loc === S.loc).map(c => {
     const it = I[c.id] || {}, s = st(c), sub = [(it.defects || []).slice(0, 3).join(', '), pc[c.id] ? `${pc[c.id]} photo${pc[c.id] > 1 ? 's' : ''}` : '', it.comment ? '“' + it.comment.slice(0, 40) + (it.comment.length > 40 ? '…' : '') + '”' : ''].filter(Boolean).join(' · ') || c.ph + '.jpg';
     return `<button class="tap" data-act="open-comp" data-cid="${esc(c.id)}"><span class="code">${esc(c.code)}</span>
@@ -1201,7 +1234,7 @@ function viewChecklist(id) {
       <span class="badge ${s.cls}">${s.label}</span></button>`;
   }).join('')}</div>
   ${S.addItem ? `<div class="card"><b>Add an item to ${esc(locLabel(S.loc) || 'General')}</b>
-      <label class="f"><span>Item name</span><input class="in" id="new-item" placeholder="e.g. Scour protection, Service pipe, Pile 7" autocapitalize="sentences" enterkeyhint="done"></label>
+      <label class="f"><span>Item name</span><input class="in" id="new-item" placeholder="e.g. Scour protection, or Pile x4" autocapitalize="sentences" enterkeyhint="done"></label>
       <div class="row"><button class="btn ghost grow" data-act="add-item-cancel">Cancel</button><button class="btn grow" data-act="add-item-save">Add item</button></div></div>`
     : `<button class="btn out block" data-act="add-item">+ Add an item to ${esc(locLabel(S.loc) || 'General')}</button>`}
   <button class="btn dark block" data-act="open-review" data-id="${esc(id)}">Review &amp; finish</button>`;
@@ -1336,6 +1369,7 @@ const A = {
     if (!f.bridgeNo.trim()) { toast('Enter the bridge or structure number.'); $('#f-bridgeNo').focus(); return; }
     const layout = {}; T.params.forEach(([k]) => layout[k] = f[k]); T.choices.forEach(([k]) => layout[k] = f[k]);
     if (f.type === 'custom') {
+      f.groups = f.groups.filter(g => g.k === 'GEN' || g.items.length);
       f.groups.forEach((g, i) => { if (g.k !== 'GEN' && !g.name.trim()) g.name = 'Location ' + i; });
       if (!f.groups.some(g => g.items.length)) { toast('Add at least one item.'); return; }
       layout.groups = JSON.parse(JSON.stringify(f.groups));
@@ -1377,30 +1411,33 @@ const A = {
   },
   'open-insp'(d) { S.loc = null; nav({ name: 'checklist', id: d.id }); },
   'open-review'(d) { nav({ name: 'review', id: d.id || S.route.id }); },
-  loc(d) { S.loc = d.loc; S.addItem = false; render(); },
+  loc(d) { S.loc = d.loc; S.addItem = false; S.addLoc = false; render(); },
   'edit-setup'(d) { const b = Store.get('bridges', d.id); if (!b) return; S.form = editForm(b, d.id); nav({ name: 'add' }); },
   'add-item'() { S.addItem = true; render(); setTimeout(() => $('#new-item')?.focus(), 30); },
   'add-item-cancel'() { S.addItem = false; render(); },
   async 'add-item-save'() {
     const name = ($('#new-item')?.value || '').trim(); if (!name) { $('#new-item')?.focus(); return; }
-    const insp = Store.get('inspections', S.route.id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
-    const loc = S.loc || 'GEN', same = b.components.filter(c => c.loc === loc);
-    const prefix = loc === 'GEN' ? 'General' : ((same.find(c => !c.custom) || same[0])?.ph || loc).split('_')[0];
-    let n = b.components.filter(c => c.custom && c.loc === loc).length + 1, code;
-    do { code = loc === 'GEN' ? 'X' + n : `${loc}-X${n}`; n++; } while (b.components.some(c => c.id === code.replace(/\//g, '_')));
-    let ph = prefix + '_' + (name.replace(/[^A-Za-z0-9]+/g, '').slice(0, 24) || code.replace(/\W/g, ''));
-    while (b.components.some(c => c.ph === ph)) ph += 'x';
-    const c = { id: code.replace(/\//g, '_'), code, loc, name, ph, custom: true };
-    let at = -1; b.components.forEach((x, k) => { if (x.loc === loc) at = k; });
-    const list = [...b.components]; list.splice(at < 0 ? list.length : at + 1, 0, c);
-    await Store.put('bridges', insp.bridgeId, { ...b, components: list });
-    S.addItem = false; S.lastCid = c.id; render(); toast(`Added “${name}”.`);
+    const insp = Store.get('inspections', S.route.id); if (!insp) return;
+    const first = await addItems(insp.bridgeId, S.loc || 'GEN', expandNames(name));
+    S.addItem = false; S.lastCid = first; render(); toast(`Added “${name}”.`);
+  },
+  'add-loc'() { S.addLoc = true; S.addItem = false; render(); setTimeout(() => $('#new-loc')?.focus(), 30); },
+  'add-loc-cancel'() { S.addLoc = false; render(); },
+  async 'add-loc-save'() {
+    const name = ($('#new-loc')?.value || '').trim(), items = ($('#new-loc-items')?.value || '').trim();
+    if (!name) { $('#new-loc')?.focus(); return; }
+    if (!items) { $('#new-loc-items')?.focus(); toast('Add at least one item for this location.'); return; }
+    const insp = Store.get('inspections', S.route.id); if (!insp) return;
+    const loc = 'M' + uid();
+    await addItems(insp.bridgeId, loc, items.split(/\s*,\s*/).filter(Boolean).flatMap(expandNames), name);
+    S.addLoc = false; S.loc = loc; render(); toast(`Added location “${name}”.`);
   },
   async 'del-item'(d) {
     const insp = Store.get('inspections', S.route.id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
     if (compHasData(insp.bridgeId, d.cid)) { toast('This item has findings or photos. Remove those first.'); return; }
     if (!confirm('Remove this item from the bridge?')) return;
-    await Store.put('bridges', insp.bridgeId, { ...b, components: b.components.filter(c => c.id !== d.cid) });
+    const layout = b.layout?.groups ? { ...b.layout, groups: b.layout.groups.map(g => ({ ...g, items: g.items.filter(it => it.id !== d.cid) })) } : b.layout;
+    await Store.put('bridges', insp.bridgeId, { ...b, layout, components: b.components.filter(c => c.id !== d.cid) });
     back(); toast('Item removed.');
   },
   'open-comp'(d) { nav({ name: 'component', id: S.route.id, cid: d.cid }); },
@@ -1724,7 +1761,7 @@ async function prExport() {
     if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
   } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } if (e.key === 'Enter' && e.target.id?.startsWith('mg-new-')) { e.preventDefault(); A['mg-item-add'](e.target.dataset); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && (e.target.id === 'new-loc-items' || e.target.id === 'new-loc')) { e.preventDefault(); A['add-loc-save'](); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } if (e.key === 'Enter' && e.target.id?.startsWith('mg-new-')) { e.preventDefault(); A['mg-item-add'](e.target.dataset); } });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
 document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
 window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
