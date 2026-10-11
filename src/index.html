@@ -361,7 +361,7 @@ const TEMPLATES = {
     defects: ['Cracking', 'Spalling', 'Exposed reinforcement', 'Water ingress / seepage', 'Efflorescence / leaching', 'Joint opening / failure', 'Settlement / misalignment', 'Drainage blocked', 'Ponding', 'Lighting fault', 'Graffiti / vandalism', 'Debris / litter', 'Scour at inlet / outlet', 'Impact damage'],
   },
   custom: {
-    name: 'Custom bridge', tile: 'Manual set-up', blurb: 'Type your own locations and items',
+    name: 'Manual bridge', tile: 'Manual set-up', blurb: 'Type your own locations and items',
     params: [], choices: [],
     defects: ['Cracking', 'Spalling', 'Exposed reinforcement', 'Corrosion', 'Section loss', 'Coating breakdown', 'Rot / decay', 'Splitting', 'Deformation', 'Loose / missing parts', 'Settlement / movement', 'Scour', 'Water ingress / seepage', 'Drainage blocked', 'Impact damage', 'Debris / vegetation', 'Graffiti / vandalism'],
   },
@@ -476,7 +476,7 @@ const compFull = c => c.name.replace(/^(Pile|Stringer|Girder|Steel girder|Column
 
 function factsOf(b) {
   const t = typeOf(b), L = b.layout || {};
-  if (t === 'custom') return [['Type', 'Custom (manual set-up)'], ['Locations', String((L.groups || []).filter(g => g.items.length).length)]];
+  if (t === 'custom') return [['Type', 'Manual set-up'], ['Locations', String((L.groups || []).filter(g => g.items.length).length)]];
   if (t === 'timber') return [['Type', 'Timber'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Piers', `${L.spans - 1} · ${L.pilesPerPier} piles each`], ['Stringers', `${L.stringersPerSpan} per span`], ['Abutments', L.abutType === 'bedlog' ? 'Bedlog' : 'Sill beam + sheeting'], ['Corbels', L.corbels === 'no' ? 'No' : 'Yes']];
   if (t === 'underpass') return [['Type', 'Underpass'], ['Units', `${L.units} · Entry 1 → Entry 2`], ['Form', { box: 'Box units', arch: 'Arch', slab: 'Slab on walls' }[L.form || 'box']]];
   return [['Type', t === 'steel' ? 'Steel' : 'Concrete'], ['Layout', `A1 · ${L.spans} span${L.spans > 1 ? 's' : ''} · A2`], ['Girders', L.girdersPerSpan ? `${L.girdersPerSpan} per span` : 'Slab deck'], ['Piers', `${L.spans - 1} · ${L.columnsPerPier} column${L.columnsPerPier > 1 ? 's' : ''} each`], ...(t === 'steel' ? [['Deck', { concrete: 'Concrete', steel: 'Steel', timber: 'Timber' }[L.deckType || 'concrete']]] : [])];
