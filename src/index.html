@@ -1096,11 +1096,6 @@ function viewBridge(id) {
       <label class="f" style="max-width:130px"><span>SLK</span><input class="in" id="d-slk" inputmode="decimal" value="${esc(b.slk || '')}"></label></div>
     <label class="f"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
     <button class="btn out sm" data-act="save-details">Save details</button></div>
-  <div class="card"><div class="row between wrap"><span class="sub">GPS · ${typeOf(b) === 'underpass' ? 'Entry 1' : 'Abutment 1, LHS top corner'}</span><button class="btn out sm" data-act="gps-here">${ICON.pin} Use my location</button></div>
-    <div class="row wrap" style="align-items:flex-end">
-      <label class="f" style="min-width:130px"><span>Latitude</span><input class="in mono" id="lat" inputmode="decimal" value="${b.gps ? esc(b.gps.lat) : ''}" placeholder="-31.950000"></label>
-      <label class="f" style="min-width:130px"><span>Longitude</span><input class="in mono" id="lng" inputmode="decimal" value="${b.gps ? esc(b.gps.lng) : ''}" placeholder="115.860000"></label>
-      <button class="btn out sm" style="min-height:48px" data-act="save-gps">Save</button></div></div>
   ${start}
   <div class="sec"><div class="sec-h"><h3>History</h3></div>
     ${list.length ? list.map(i => { const t = tally(i, b);
