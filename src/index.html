@@ -1013,7 +1013,7 @@ function viewData() {
   <div class="card"><b>Stored on this device only</b>
     <span class="sub" id="usage">Checking storage…</span>
     <span class="sub">${Store.persisted ? 'Protected: the phone will not clear this data on its own.' : 'Not yet protected from automatic clean-up. Install the app on the home screen and open it from the icon.'} Export each inspection when finished, and back up regularly.</span></div>
-  <div class="sec"><div class="sec-h"><h3>Online sync · Google Drive</h3>${adminOpen() ? `<button class="more" data-act="lock">${ICON.lock} Lock</button>` : ''}</div>
+  <div class="sec"><div class="sec-h"><h3>Online Sync Setup</h3>${adminOpen() ? `<button class="more" data-act="lock">${ICON.lock} Lock</button>` : ''}</div>
     ${!adminOpen() ? syncLocked() : `<div class="card">
       <b>${!Sync.url ? 'Not set up' : Sync.busy ? 'Syncing…' : Sync.lastErr ? 'Last sync failed' : Sync.lastOk ? 'Last synced ' + new Date(Sync.lastOk).toLocaleString('en-AU') : 'Not synced yet'}</b>
       <span class="sub">${Store.dirty ? `${Store.dirty} change${Store.dirty > 1 ? 's' : ''} or photo${Store.dirty > 1 ? 's' : ''} waiting on this phone` : 'Nothing waiting on this phone'}${navigator.onLine ? '' : ' · no signal now'}</span>
