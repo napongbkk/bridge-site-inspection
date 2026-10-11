@@ -234,6 +234,8 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .sheet-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 /* Picture report (PC) */
+.lockc .lock-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--well);flex:0 0 auto}
+.sec-h .more svg{width:14px;height:14px;vertical-align:-2px}
 .credit{margin:8px 0 0;text-align:center;font-size:12px;letter-spacing:.04em;color:var(--muted);opacity:.85}
 body.wide .credit{grid-column:1/-1;padding:12px 0 20px}
 .desk-only{display:none} @media (min-width:900px){.desk-only{display:flex}}
@@ -468,7 +470,7 @@ function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); }
 const svgI = d => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-const ICON = { folder: svgI('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'), clock: svgI('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'), check: svgI('<path d="M5 12l5 5L20 7"/>'), phone: svgI('<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>'), x: svgI('<path d="M6 6l12 12M18 6L6 18"/>'), left: svgI('<path d="M15 6l-6 6 6 6"/>'), sync: svgI('<path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>'), search: svgI('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'), cal: svgI('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), play: svgI('<path d="M8 5l11 7-11 7z"/>'), doc: svgI('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>'), mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
+const ICON = { lock: svgI('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'), folder: svgI('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'), clock: svgI('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'), check: svgI('<path d="M5 12l5 5L20 7"/>'), phone: svgI('<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>'), x: svgI('<path d="M6 6l12 12M18 6L6 18"/>'), left: svgI('<path d="M15 6l-6 6 6 6"/>'), sync: svgI('<path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>'), search: svgI('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'), cal: svgI('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), play: svgI('<path d="M8 5l11 7-11 7z"/>'), doc: svgI('<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>'), mic: svgI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), cam: svgI('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'), img: svgI('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'), chev: svgI('<path d="M9 6l6 6-6 6"/>'), pin: svgI('<path d="M12 21s-7-6.3-7-11.5a7 7 0 0 1 14 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), share: svgI('<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), db: svgI('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>') };
 const typeIcon = (t, w = 64, h = 40) => `<svg width="${w}" height="${h}" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t]}</svg>`;
 const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
 const isAndroid = () => /Android/i.test(navigator.userAgent);
@@ -986,6 +988,19 @@ function openNewSheet() {
 }
 
 /* ---------- Data, backup, restore ---------- */
+/* Admin lock for the Online sync settings. Only a salted SHA-256 of the password is kept here. */
+const ADMIN_SALT = '7549a73928a2f18b054740dbe6fd4f6e', ADMIN_HASH = 'd4050ea06e6c6367c7c4152967f5a3a8432e38217b43da55c84d9a6113de034c';
+const adminOpen = () => { try { return sessionStorage.getItem('bsi-admin') === ADMIN_HASH; } catch { return !!S.admin; } };
+async function adminCheck(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ADMIN_SALT + pw));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('') === ADMIN_HASH;
+}
+function syncLocked() {
+  return `<div class="card lockc">
+      <div class="row" style="gap:14px"><span class="lock-ic" aria-hidden="true">${ICON.lock}</span><span class="grow"><b>Locked</b><br><span class="sub">Enter the admin password to see or change the sync settings.</span></span></div>
+      <div class="row"><label class="f grow"><span class="sr">Admin password</span><input class="in" type="password" id="admin-pw" autocomplete="current-password" placeholder="Password" enterkeyhint="go"></label><button class="btn" data-act="unlock">Unlock</button></div>
+      <span class="sub" id="pw-err" role="alert" style="color:var(--danger)"></span></div>`;
+}
 function viewData() {
   setBar('');
   const nb = Store.all('bridges').length, ni = Store.all('inspections').length, np = Store.all('inspections').reduce((a, i) => a + photosOf(i).length, 0);
@@ -998,15 +1013,15 @@ function viewData() {
   <div class="card"><b>Stored on this device only</b>
     <span class="sub" id="usage">Checking storage…</span>
     <span class="sub">${Store.persisted ? 'Protected: the phone will not clear this data on its own.' : 'Not yet protected from automatic clean-up. Install the app on the home screen and open it from the icon.'} Export each inspection when finished, and back up regularly.</span></div>
-  <div class="sec"><div class="sec-h"><h3>Online sync · Google Drive</h3></div>
-    <div class="card">
+  <div class="sec"><div class="sec-h"><h3>Online sync · Google Drive</h3>${adminOpen() ? `<button class="more" data-act="lock">${ICON.lock} Lock</button>` : ''}</div>
+    ${!adminOpen() ? syncLocked() : `<div class="card">
       <b>${!Sync.url ? 'Not set up' : Sync.busy ? 'Syncing…' : Sync.lastErr ? 'Last sync failed' : Sync.lastOk ? 'Last synced ' + new Date(Sync.lastOk).toLocaleString('en-AU') : 'Not synced yet'}</b>
       <span class="sub">${Store.dirty ? `${Store.dirty} change${Store.dirty > 1 ? 's' : ''} or photo${Store.dirty > 1 ? 's' : ''} waiting on this phone` : 'Nothing waiting on this phone'}${navigator.onLine ? '' : ' · no signal now'}</span>
       ${Sync.lastErr ? `<span class="sub" style="color:var(--danger)">${esc(Sync.lastErr)}</span>` : ''}
       <label class="f"><span>Sync address (Google Apps Script web app URL)</span><input class="in mono" id="sync-url" value="${esc(Sync.url)}" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
       <div class="row wrap"><button class="btn out sm" data-act="sync-save">Save address</button><button class="btn sm" data-act="sync-now" ${Sync.url ? '' : 'disabled'}>Sync now</button></div>
       <span class="sub">Everything is saved on this phone first. With signal, changes and photos go to the Google Sheet and Drive, and corrections made on other devices come back here (merged component by component). Photos go to Drive → Bridge Inspection → Photos → one folder per inspection. Anyone who has this address can read and change the online data.</span>
-    </div></div>
+    </div>`}</div>
   <div class="sec"><div class="sec-h"><h3>Backup</h3></div>
     <button class="btn block" data-act="backup">Back up everything (ZIP)</button>
     <span class="sub">One file with every bridge, inspection and photo. Save it to Files, OneDrive or SharePoint. Use it to move to a new phone or recover data.</span>
@@ -1319,7 +1334,14 @@ const A = {
   pics(d) { flushReview(); exportPackage(d.id, true); },
   json(d) { flushReview(); exportJson(d.id); },
   'gps-toggle'() { lsSet('bsi-gps', !lsGet('bsi-gps', true)); render(); },
+  async unlock() {
+    const el = $('#admin-pw'), pw = el?.value || ''; if (!pw) { el?.focus(); return; }
+    if (await adminCheck(pw)) { try { sessionStorage.setItem('bsi-admin', ADMIN_HASH); } catch { S.admin = true; } render(); toast('Unlocked.'); }
+    else { el.value = ''; el.focus(); $('#pw-err').textContent = 'Wrong password. Try again.'; }
+  },
+  lock() { try { sessionStorage.removeItem('bsi-admin'); } catch {} S.admin = false; render(); toast('Locked.'); },
   async 'sync-save'() {
+    if (!adminOpen()) return;
     const v = $('#sync-url').value.trim(), cfg = String(window.BSI_CONFIG?.syncUrl || '').trim();
     if (v && !/^https:\/\/script\.google(usercontent)?\.com\//.test(v)) { toast('That does not look like a Google Apps Script web app address (https://script.google.com/macros/s/…/exec).'); return; }
     const changed = v !== Sync.url;
@@ -1584,6 +1606,7 @@ async function prExport() {
     if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
   } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
 }
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
 document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
 window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
