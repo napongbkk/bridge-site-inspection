@@ -235,6 +235,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 .sec-h .more svg{width:14px;height:14px;vertical-align:-2px}
 .chip.adddef{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
 .chips.loc .chip.addloc{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
+.btn.del-out{color:var(--danger)}
 .dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
 .dl div{display:flex;flex-direction:column;gap:2px;min-width:0} .dl b{font-size:15.5px;overflow-wrap:anywhere}
 .mg-items{display:flex;flex-wrap:wrap;gap:6px}
@@ -1208,7 +1209,7 @@ ${S.editDetails ? `  <div class="card"><b>Details</b>
       <span class="sub" style="${i.status !== 'complete' ? 'color:var(--link);font-weight:600' : ''}">${i.status === 'complete' ? 'Complete' : 'In progress'}</span>${ICON.chev}</button>`; }).join('')
       : '<span class="sub">No inspections yet.</span>'}</div>
   ${S.confirm === 'del-bridge' ? `<div class="confirm"><span class="grow">Delete ${esc(b.bridgeNo)} and all its inspections and photos from this device?</span><button class="btn sm ghost" data-act="cancel">Cancel</button><button class="btn sm danger" data-act="del-bridge" data-id="${esc(id)}">Delete</button></div>`
-    : `<div class="row wrap"><button class="btn out grow" data-act="edit-setup" data-id="${esc(id)}">Edit set-up</button><button class="btn ghost grow" data-act="ask" data-what="del-bridge">Delete bridge</button></div>`}`;
+    : `<div class="row wrap"><button class="btn out grow" data-act="edit-setup" data-id="${esc(id)}">Edit set-up</button><button class="btn out grow del-out" data-act="ask" data-what="del-bridge">Delete bridge</button></div>`}`;
 }
 
 /* ---------- Checklist ---------- */
