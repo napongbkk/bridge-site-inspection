@@ -233,6 +233,7 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:none;box-shadow:inset 0
 /* Picture report (PC) */
 .lockc .lock-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--well);flex:0 0 auto}
 .sec-h .more svg{width:14px;height:14px;vertical-align:-2px}
+.chip.adddef{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
 .chips.loc .chip.addloc{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);color:var(--muted);font-weight:600}
 .mg-items{display:flex;flex-wrap:wrap;gap:6px}
 .mg-it{display:inline-flex;align-items:center;gap:6px;background:var(--well);border-radius:999px;padding:5px 6px 5px 12px;font-size:14px}
@@ -739,7 +740,7 @@ function onRemoteChange() {
 const S = { hIdx: 0, newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
 function nav(route, replace) {
   if (!replace) { S.stack.push(S.route); S.hIdx++; try { history.pushState({ idx: S.hIdx }, ''); } catch {} }
-  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; S.addLoc = false; render(); window.scrollTo(0, 0);
+  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; S.addLoc = false; S.addDefect = false; render(); window.scrollTo(0, 0);
 }
 /* Leaving a component (Done or Back): hand its new camera photos to the phone in one go.
    iPhone: the tap that leaves the screen opens the share sheet; iPhone asks once ("Save Images"),
@@ -756,7 +757,7 @@ function savePendingToPhotos() {
   if (!canShareFiles(files)) return;
   navigator.share({ files }).then(() => toast(`${files.length} photo${files.length > 1 ? 's' : ''} sent to iPhone.`)).catch(() => {});
 }
-function leaveComponent() { if (S.route.name === 'component') { flushDraft(); savePendingToPhotos(); } }
+function leaveComponent() { S.addDefect = false; if (S.route.name === 'component') { flushDraft(); savePendingToPhotos(); } }
 // In-app Back and Done: leave the screen during the tap, then step back through browser history,
 // so the Android back gesture/button and the app's own Back always agree.
 function back() { leaveComponent(); if (S.hIdx > 0) history.back(); else appBack(); }
@@ -1094,6 +1095,11 @@ async function addItems(bid, loc, names, locName) {
   await Store.put('bridges', bid, { ...b, components: list, locNames });
   return firstId;
 }
+// Defects typed by the inspector: remembered on this device per bridge type, plus any already on this item.
+function myDefects(b, it) {
+  const base = TEMPLATES[typeOf(b)].defects;
+  return [...new Set([...lsGet('bsi-defects-' + typeOf(b), []), ...(it.defects || [])])].filter(x => !base.includes(x));
+}
 function compHasData(bridgeId, cid) {
   return inspectionsFor(bridgeId).some(i => { const it = itemsOf(i)[cid]; return (it && ((it.defects || []).length || it.none || it.na || it.comment)) || photosOf(i, cid).length; });
 }
@@ -1271,8 +1277,14 @@ function viewComponent(inspId, cid) {
   <div class="sec"><div class="sec-h"><h3>Defects observed</h3>${it.defects.length ? `<span class="sub">${it.defects.length} selected</span>` : ''}</div>
     <div class="chips">
       <button class="chip okc" aria-pressed="${it.none}" data-act="none" ${dis}>No defects</button>
-      ${TEMPLATES[typeOf(b)].defects.map(x => `<button class="chip" aria-pressed="${it.defects.includes(x)}" data-act="defect" data-v="${esc(x)}" ${dis}>${esc(x)}</button>`).join('')}
-      <button class="chip nac" aria-pressed="${it.na}" data-act="na" ${dis}>Not accessible</button></div></div>
+      ${[...TEMPLATES[typeOf(b)].defects, ...myDefects(b, it)].map(x => `<button class="chip" aria-pressed="${it.defects.includes(x)}" data-act="defect" data-v="${esc(x)}" ${dis}>${esc(x)}</button>`).join('')}
+      <button class="chip nac" aria-pressed="${it.na}" data-act="na" ${dis}>Not accessible</button>
+      ${S.addDefect ? '' : `<button class="chip adddef" data-act="add-defect" ${dis}>+ Add defect</button>`}</div>
+    ${S.addDefect ? `<div class="card"><b>Add your own defect</b>
+      <div class="row"><label class="f grow"><span class="sr">Defect</span><input class="in" id="new-defect" placeholder="e.g. Bolt corrosion, Bird nesting" autocapitalize="sentences" enterkeyhint="done"></label><button class="btn" data-act="add-defect-save">Add</button></div>
+      ${(() => { const mine = lsGet('bsi-defects-' + typeOf(b), []); return mine.length ? `<span class="sub">Your saved defects for ${esc(TEMPLATES[typeOf(b)].name.toLowerCase())}s (tap ✕ to remove from the list):</span>
+        <div class="mg-items">${mine.map(x => `<span class="mg-it">${esc(x)}<button data-act="del-defect" data-v="${esc(x)}" aria-label="Remove ${esc(x)} from the list">✕</button></span>`).join('')}</div>` : ''; })()}
+      <button class="btn ghost sm" data-act="add-defect-cancel">Close</button></div>` : ''}</div>
   <div class="sec"><div class="sec-h"><h3>Comments</h3>${ro ? '' : `<button class="btn out sm" data-act="dictate" data-for="cmt">${ICON.mic} Speak</button>`}</div>
     <label class="f"><span class="sr">Comments</span><textarea class="in" id="cmt" data-in="comment" autocapitalize="sentences" spellcheck="true" placeholder="Type, or tap Speak and use the microphone on your keyboard. E.g. 300 mm crack at mid-span, upstream face" ${dis}>${esc(it.comment)}</textarea></label></div>
   <div class="sec"><div class="sec-h"><h3>Photos (${photos.length})</h3></div>
@@ -1446,6 +1458,18 @@ const A = {
   },
   none() { const it = S.draft.it; it.none = !it.none; if (it.none) { it.defects = []; it.na = false; } touchDraft(); render(); },
   na() { const it = S.draft.it; it.na = !it.na; if (it.na) it.none = false; touchDraft(); render(); },
+  'add-defect'() { S.addDefect = true; render(); setTimeout(() => $('#new-defect')?.focus(), 30); },
+  'add-defect-cancel'() { S.addDefect = false; render(); },
+  'add-defect-save'() {
+    const el = $('#new-defect'), t = (el?.value || '').trim().replace(/\s+/g, ' '); if (!t) { el?.focus(); return; }
+    const insp = Store.get('inspections', S.route.id), b = insp && Store.get('bridges', insp.bridgeId); if (!b || !S.draft) return;
+    const base = TEMPLATES[typeOf(b)].defects, key = 'bsi-defects-' + typeOf(b), mine = lsGet(key, []);
+    const name = [...base, ...mine].find(x => x.toLowerCase() === t.toLowerCase()) || t;
+    if (!base.includes(name) && !mine.includes(name)) lsSet(key, [...mine, name]);
+    const it = S.draft.it; if (!it.defects.includes(name)) it.defects = [...it.defects, name]; it.none = false; it.na = false;
+    touchDraft(); S.addDefect = false; render(); toast(`Added “${name}”.`);
+  },
+  'del-defect'(d) { const insp = Store.get('inspections', S.route.id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return; const key = 'bsi-defects-' + typeOf(b); lsSet(key, lsGet(key, []).filter(x => x !== d.v)); render(); },
   defect(d) { const it = S.draft.it; it.defects = it.defects.includes(d.v) ? it.defects.filter(x => x !== d.v) : [...it.defects, d.v]; if (it.defects.length) { it.none = false; it.na = false; } touchDraft(); render(); },
   dictate(d) {
     const el = document.getElementById(d.for); if (!el) return;
@@ -1758,7 +1782,7 @@ async function prExport() {
     if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
   } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && (e.target.id === 'new-loc-items' || e.target.id === 'new-loc')) { e.preventDefault(); A['add-loc-save'](); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } if (e.key === 'Enter' && e.target.id?.startsWith('mg-new-')) { e.preventDefault(); A['mg-item-add'](e.target.dataset); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && (e.target.id === 'new-loc-items' || e.target.id === 'new-loc')) { e.preventDefault(); A['add-loc-save'](); } if (e.key === 'Enter' && e.target.id === 'new-defect') { e.preventDefault(); A['add-defect-save'](); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } if (e.key === 'Enter' && e.target.id?.startsWith('mg-new-')) { e.preventDefault(); A['mg-item-add'](e.target.dataset); } });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
 document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
 window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
