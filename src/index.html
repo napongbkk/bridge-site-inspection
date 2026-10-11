@@ -713,7 +713,7 @@ function onRemoteChange() {
 const S = { hIdx: 0, newPhotos: [], route: { name: 'home' }, stack: [], q: '', ft: 'all', form: null, draft: null, confirm: null, loc: null, level: 2, lastCid: null, restore: null };
 function nav(route, replace) {
   if (!replace) { S.stack.push(S.route); S.hIdx++; try { history.pushState({ idx: S.hIdx }, ''); } catch {} }
-  S.route = route; S.confirm = null; S.draft = null; render(); window.scrollTo(0, 0);
+  S.route = route; S.confirm = null; S.draft = null; S.addItem = false; render(); window.scrollTo(0, 0);
 }
 /* Leaving a component (Done or Back): hand its new camera photos to the phone in one go.
    iPhone: the tap that leaves the screen opens the share sheet; iPhone asks once ("Save Images"),
@@ -1038,6 +1038,29 @@ function viewData() {
 }
 
 /* ---------- Set up bridge ---------- */
+/* Editing a bridge's set-up keeps everything already recorded: components keep their IDs, and any
+   component that the new layout drops is kept if an inspection has findings or photos for it.
+   Items added by hand (custom) are always kept. */
+function compHasData(bridgeId, cid) {
+  return inspectionsFor(bridgeId).some(i => { const it = itemsOf(i)[cid]; return (it && ((it.defects || []).length || it.none || it.na || it.comment)) || photosOf(i, cid).length; });
+}
+function mergeComponents(b, bid, fresh) {
+  const ids = new Set(fresh.map(c => c.id)), out = [...fresh], kept = [];
+  for (const c of b.components) {
+    if (ids.has(c.id) || !(c.custom || compHasData(bid, c.id))) continue;
+    // Place it after the last component of its own location, or else after whatever came before it originally.
+    let at = -1; out.forEach((x, k) => { if (x.loc === c.loc) at = k; });
+    if (at < 0) { const prev = b.components.slice(0, b.components.indexOf(c)).reverse().find(x => out.includes(x) || ids.has(x.id)); at = prev ? out.findIndex(x => x.id === prev.id) : -1; }
+    out.splice(at + 1, 0, c); if (!c.custom) kept.push(c);
+  }
+  const old = new Set(b.components.map(c => c.id));
+  return { list: out, added: fresh.filter(c => !old.has(c.id)).length, kept: kept.length,
+    removed: b.components.filter(c => !ids.has(c.id) && !c.custom && !compHasData(bid, c.id)).length };
+}
+function editForm(b, bid) {
+  const f = { ...newForm(typeOf(b)), ...(b.layout || {}), project: b.project || '', bridgeNo: b.bridgeNo || '', road: b.road || '', slk: b.slk || '', region: b.region || '', editId: bid };
+  return f;
+}
 function newForm(type) {
   const T = TEMPLATES[type], f = { type, project: '', bridgeNo: '', road: '', slk: '', region: '' };
   T.params.forEach(([k, , , , d]) => f[k] = d); T.choices.forEach(([k, , opts]) => f[k] = opts[0][0]);
@@ -1045,8 +1068,9 @@ function newForm(type) {
 }
 function viewAdd() {
   const f = S.form, T = TEMPLATES[f.type];
-  setBar('Set up ' + T.name.toLowerCase(), 'Start');
-  const comps = generateComponents(f.type, f), locs = [...new Set(comps.filter(c => c.loc !== 'GEN').map(c => c.loc))];
+  const eb = f.editId && Store.get('bridges', f.editId);
+  setBar(eb ? 'Edit set-up' : 'Set up ' + T.name.toLowerCase(), eb ? 'Bridge' : 'Start');
+  const comps = generateComponents(f.type, f), mg = eb ? mergeComponents(eb, f.editId, comps) : null, locs = [...new Set(comps.filter(c => c.loc !== 'GEN').map(c => c.loc))];
   const stepper = ([k, label, min, max]) => `<div class="step"><span class="l">${label}</span>
     <button data-act="step" data-k="${k}" data-d="-1" data-min="${min}" data-max="${max}" aria-label="Decrease ${label}">−</button><b>${f[k]}</b>
     <button data-act="step" data-k="${k}" data-d="1" data-min="${min}" data-max="${max}" aria-label="Increase ${label}">+</button></div>`;
@@ -1066,9 +1090,12 @@ function viewAdd() {
     <div class="card" style="gap:0">${T.params.map(stepper).join('')}</div>
     ${T.choices.map(([k, label, opts]) => `<span class="sub">${label}</span><div class="seg" role="group" aria-label="${esc(label)}">${opts.map(([v, l]) => `<button aria-pressed="${f[k] === v}" data-act="form-set" data-k="${k}" data-v="${v}">${esc(l)}</button>`).join('')}</div>`).join('')}
   </div>
-  <div class="card"><b>${comps.length} components will be created</b><span class="sub">${['General', ...locSeq.map(l => l === '…' ? '…' : locLabel(l))].join(' → ')}</span>
+  ${eb ? `<div class="card"><b>${mg.list.length} components after saving</b>
+    <span class="sub">${[mg.added && `${mg.added} new`, mg.removed && `${mg.removed} removed (nothing recorded on them)`, mg.kept && `${mg.kept} kept because they already have findings or photos`].filter(Boolean).join(' · ') || 'No change to the component list.'}</span>
+    <span class="sub">All existing inspections, findings, comments and photos stay as they are.</span></div>
+  <button class="btn block" data-act="save-bridge">Save changes</button>` : `<div class="card"><b>${comps.length} components will be created</b><span class="sub">${['General', ...locSeq.map(l => l === '…' ? '…' : locLabel(l))].join(' → ')}</span>
     <span class="sub">Photos are named by component, e.g. ${esc(comps.filter(c => c.loc !== 'GEN').slice(0, 3).map(c => c.ph + '.jpg').join(', '))}.</span></div>
-  <button class="btn block" data-act="save-bridge">Save ${esc(T.name.toLowerCase())}</button>`;
+  <button class="btn block" data-act="save-bridge">Save ${esc(T.name.toLowerCase())}</button>`}`;
 }
 
 /* ---------- Bridge ---------- */
@@ -1095,7 +1122,7 @@ function viewBridge(id) {
       <label class="f" style="min-width:160px"><span>Road</span><input class="in" id="d-road" value="${esc(b.road || '')}"></label>
       <label class="f" style="max-width:130px"><span>SLK</span><input class="in" id="d-slk" inputmode="decimal" value="${esc(b.slk || '')}"></label></div>
     <label class="f"><span>Region</span><input class="in" id="d-region" value="${esc(b.region || '')}"></label>
-    <button class="btn out sm" data-act="save-details">Save details</button></div>
+    <div class="row wrap"><button class="btn out sm" data-act="save-details">Save details</button><button class="btn ghost sm" data-act="edit-setup" data-id="${esc(id)}">Edit set-up (spans, piers, piles …)</button></div></div>
   ${start}
   <div class="sec"><div class="sec-h"><h3>History</h3></div>
     ${list.length ? list.map(i => { const t = tally(i, b);
@@ -1130,6 +1157,10 @@ function viewChecklist(id) {
       <span class="grow" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:16px">${esc(c.name)}</b><span class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sub)}</span></span>
       <span class="badge ${s.cls}">${s.label}</span></button>`;
   }).join('')}</div>
+  ${S.addItem ? `<div class="card"><b>Add an item to ${esc(locLabel(S.loc) || 'General')}</b>
+      <label class="f"><span>Item name</span><input class="in" id="new-item" placeholder="e.g. Scour protection, Service pipe, Pile 7" autocapitalize="sentences" enterkeyhint="done"></label>
+      <div class="row"><button class="btn ghost grow" data-act="add-item-cancel">Cancel</button><button class="btn grow" data-act="add-item-save">Add item</button></div></div>`
+    : `<button class="btn out block" data-act="add-item">+ Add an item to ${esc(locLabel(S.loc) || 'General')}</button>`}
   <button class="btn dark block" data-act="open-review" data-id="${esc(id)}">Review &amp; finish</button>`;
 }
 
@@ -1162,7 +1193,8 @@ function viewComponent(inspId, cid) {
   const photos = photosOf(insp, cid), names = photoNames(insp, b);
   setBar(c.code, 'Components');
   return `
-  <div><h2 class="big">${esc(c.name)}</h2><span class="sub">${locLabel(c.loc)} · <span class="mono">${esc(c.code)}</span> · photos save as <span class="mono">${esc(c.ph)}.jpg</span>${ro ? ' · completed, read only' : ''}</span></div>
+  <div><h2 class="big">${esc(c.name)}</h2><span class="sub">${locLabel(c.loc)} · <span class="mono">${esc(c.code)}</span> · photos save as <span class="mono">${esc(c.ph)}.jpg</span>${ro ? ' · completed, read only' : ''}${c.custom ? ' · added by hand' : ''}</span>
+    ${c.custom && !photos.length ? `<button class="btn ghost sm" style="margin-top:6px" data-act="del-item" data-cid="${esc(c.id)}">Remove this item</button>` : ''}</div>
   <div class="sec"><div class="sec-h"><h3>Defects observed</h3>${it.defects.length ? `<span class="sub">${it.defects.length} selected</span>` : ''}</div>
     <div class="chips">
       <button class="chip okc" aria-pressed="${it.none}" data-act="none" ${dis}>No defects</button>
@@ -1249,6 +1281,12 @@ const A = {
     const f = S.form, T = TEMPLATES[f.type];
     if (!f.bridgeNo.trim()) { toast('Enter the bridge or structure number.'); $('#f-bridgeNo').focus(); return; }
     const layout = {}; T.params.forEach(([k]) => layout[k] = f[k]); T.choices.forEach(([k]) => layout[k] = f[k]);
+    const eb = f.editId && Store.get('bridges', f.editId);
+    if (eb) {
+      const { list } = mergeComponents(eb, f.editId, generateComponents(f.type, layout));
+      await Store.put('bridges', f.editId, { ...eb, project: (f.project || '').trim(), bridgeNo: f.bridgeNo.trim(), road: f.road.trim(), slk: f.slk.trim(), region: f.region.trim(), layout, components: list });
+      S.form = null; back(); toast('Set-up updated. Existing records kept.'); return;
+    }
     const id = uid();
     await Store.put('bridges', id, { type: f.type, project: (f.project || '').trim(), bridgeNo: f.bridgeNo.trim(), road: f.road.trim(), slk: f.slk.trim(), region: f.region.trim(), layout, components: generateComponents(f.type, layout), gps: null, createdAt: now() });
     S.form = null; S.level = 2; nav({ name: 'bridge', id }, true); toast('Saved on this device.');
@@ -1280,7 +1318,32 @@ const A = {
   },
   'open-insp'(d) { S.loc = null; nav({ name: 'checklist', id: d.id }); },
   'open-review'(d) { nav({ name: 'review', id: d.id || S.route.id }); },
-  loc(d) { S.loc = d.loc; render(); },
+  loc(d) { S.loc = d.loc; S.addItem = false; render(); },
+  'edit-setup'(d) { const b = Store.get('bridges', d.id); if (!b) return; S.form = editForm(b, d.id); nav({ name: 'add' }); },
+  'add-item'() { S.addItem = true; render(); setTimeout(() => $('#new-item')?.focus(), 30); },
+  'add-item-cancel'() { S.addItem = false; render(); },
+  async 'add-item-save'() {
+    const name = ($('#new-item')?.value || '').trim(); if (!name) { $('#new-item')?.focus(); return; }
+    const insp = Store.get('inspections', S.route.id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
+    const loc = S.loc || 'GEN', same = b.components.filter(c => c.loc === loc);
+    const prefix = loc === 'GEN' ? 'General' : ((same.find(c => !c.custom) || same[0])?.ph || loc).split('_')[0];
+    let n = b.components.filter(c => c.custom && c.loc === loc).length + 1, code;
+    do { code = loc === 'GEN' ? 'X' + n : `${loc}-X${n}`; n++; } while (b.components.some(c => c.id === code.replace(/\//g, '_')));
+    let ph = prefix + '_' + (name.replace(/[^A-Za-z0-9]+/g, '').slice(0, 24) || code.replace(/\W/g, ''));
+    while (b.components.some(c => c.ph === ph)) ph += 'x';
+    const c = { id: code.replace(/\//g, '_'), code, loc, name, ph, custom: true };
+    let at = -1; b.components.forEach((x, k) => { if (x.loc === loc) at = k; });
+    const list = [...b.components]; list.splice(at < 0 ? list.length : at + 1, 0, c);
+    await Store.put('bridges', insp.bridgeId, { ...b, components: list });
+    S.addItem = false; S.lastCid = c.id; render(); toast(`Added “${name}”.`);
+  },
+  async 'del-item'(d) {
+    const insp = Store.get('inspections', S.route.id), b = insp && Store.get('bridges', insp.bridgeId); if (!b) return;
+    if (compHasData(insp.bridgeId, d.cid)) { toast('This item has findings or photos. Remove those first.'); return; }
+    if (!confirm('Remove this item from the bridge?')) return;
+    await Store.put('bridges', insp.bridgeId, { ...b, components: b.components.filter(c => c.id !== d.cid) });
+    back(); toast('Item removed.');
+  },
   'open-comp'(d) { nav({ name: 'component', id: S.route.id, cid: d.cid }); },
   done(d) {
     const el = $('#cmt'); if (el && S.draft) S.draft.it.comment = el.value;
@@ -1601,7 +1664,7 @@ async function prExport() {
     if (missing) toast(`${missing} picture${missing > 1 ? 's' : ''} could not be loaded (not on this computer and no signal).`);
   } catch (e) { console.error(e); toast('Word export failed: ' + (e.message || e)); }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'admin-pw') { e.preventDefault(); A.unlock(); } if (e.key === 'Enter' && e.target.id === 'new-item') { e.preventDefault(); A['add-item-save'](); } });
 document.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if (el && IN[el.dataset.in]) IN[el.dataset.in](el); });
 document.addEventListener('keydown', e => { if ($('#lightbox').hidden) return; if (e.key === 'Escape') lbClose(); if (e.key === 'ArrowLeft') A['lb-prev'](); if (e.key === 'ArrowRight') A['lb-next'](); });
 window.addEventListener('pagehide', () => { flushDraft(); flushReview(); });
